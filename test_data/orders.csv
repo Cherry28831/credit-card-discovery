@@ -1,0 +1,7 @@
+Order_ID,Customer,Card_Last4,Full_Card,Status
+ORD-001,Alice Smith,1234,Not stored,Completed
+ORD-002,Bob Jones,5678,4556737586899855,Pending
+ORD-003,Carol White,9012,Invalid-Card-123,Failed
+ORD-004,David Brown,4444,5555555555554444,Completed
+ORD-005,Eve Davis,7890,6011111111111117,Refunded
+ORD-006,Frank Miller,3456,30569309025904,Completed

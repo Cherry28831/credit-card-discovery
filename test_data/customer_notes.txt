@@ -1,0 +1,12 @@
+Customer Support Notes - January 2024
+
+Case #1234: Customer called about declined transaction
+Card ending in 4444, tried to process $500 payment
+Full card: 5555-5555-5555-4444 CVV: 123 Exp: 12/25
+
+Case #1235: Refund request approved
+Amount: $250.00 to card 4532015112830366
+
+Case #1236: Subscription renewal
+Customer John Doe, email: john@example.com
+Payment method: 6011111111111117
