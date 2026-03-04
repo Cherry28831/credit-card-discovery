@@ -122,29 +122,9 @@ The system generates two files in the `outputs/` directory:
 └── requirements.txt
 ```
 
-## Disclaimer
-
-⚠️ **For Educational and Testing Purposes Only**
-
-This tool is designed for:
-- Security auditing of your own systems
-- Compliance testing in controlled environments
-- Educational demonstrations
-
-**DO NOT:**
-- Use on systems you don't own or have permission to scan
-- Store or transmit real credit card data
-- Use in production without proper security controls
-
-All test data included uses industry-standard test card numbers that are publicly documented and non-functional.
-
 ## License
 
 MIT License - See LICENSE file for details
-
-## Contributing
-
-Contributions welcome! Please open an issue or submit a pull request.
 
 ## Acknowledgments
 
