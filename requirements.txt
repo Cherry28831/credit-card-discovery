@@ -1,0 +1,6 @@
+langchain
+langchain-ollama
+langgraph
+presidio-analyzer
+presidio-anonymizer
+spacy

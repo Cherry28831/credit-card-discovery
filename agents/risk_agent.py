@@ -4,6 +4,7 @@ from tools.false_positive_checker import is_test_card, has_test_context
 llm = OllamaLLM(model="llama3", num_predict=50)
 
 def risk_agent(state):
+    print("  [5/6] Risk: Classifying findings...")
     updated = []
 
     for item in state["enriched_findings"]:
@@ -41,4 +42,5 @@ def risk_agent(state):
         updated.append(item)
 
     state["enriched_findings"] = updated
+    print(f"  ✓ Risk classification complete")
     return state

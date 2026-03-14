@@ -131,3 +131,45 @@ MIT License - See LICENSE file for details
 - Built with [LangGraph](https://github.com/langchain-ai/langgraph)
 - Powered by [Ollama](https://ollama.com/) and Llama3
 - Luhn algorithm for card validation
+
+
+---
+
+## 🚀 PHASE 3 UPGRADES - AUTONOMOUS COMPLIANCE SYSTEM
+
+### New Features
+
+#### 1️⃣ Presidio Detection (Enterprise-Grade PII)
+- Replaced regex with Microsoft Presidio
+- Built-in credit card detection with confidence scoring
+- Better false positive reduction
+
+#### 2️⃣ Auto-Remediation Agent
+- Automatically masks critical findings
+- Replaces card numbers with `****1234` format
+- Logs remediation status in findings
+
+### Updated Architecture
+
+```
+discovery → detection (Presidio) → validation → context → risk → remediation → reporting
+```
+
+### Quick Start
+
+See [SETUP.md](SETUP.md) for full installation guide.
+
+```bash
+py -m pip install -r requirements.txt
+py -m spacy download en_core_web_sm
+py main.py
+```
+
+### What Changed
+
+| Component | Before | After |
+|-----------|--------|-------|
+| Detection | Regex patterns | Presidio AI |
+| Remediation | Manual | Automatic masking |
+
+This is now an **Autonomous PCI DSS Compliance Discovery Agent**.

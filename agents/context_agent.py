@@ -3,9 +3,11 @@ from langchain_ollama import OllamaLLM
 llm = OllamaLLM(model="llama3", num_predict=200)
 
 def context_agent(state):
+    print("  [4/6] Context: Analyzing with LLM (slow)...")
     enriched = []
 
-    for finding in state["valid_cards"]:
+    for i, finding in enumerate(state["valid_cards"], 1):
+        print(f"    Analyzing {i}/{len(state['valid_cards'])}...")
         file_path = finding["file"]
         card = finding["card_number"]
 
@@ -39,4 +41,5 @@ def context_agent(state):
         })
 
     state["enriched_findings"] = enriched
+    print(f"  ✓ Context analysis complete")
     return state

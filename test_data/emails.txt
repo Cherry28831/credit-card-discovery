@@ -32,5 +32,5 @@ Subject: Vendor Payment
 Date: Jan 17, 2024
 
 Process payment to vendor using corporate card:
-6011000990139424
+****9424
 Amount: $5,000

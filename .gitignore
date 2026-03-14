@@ -15,6 +15,9 @@ dist/
 outputs/*.json
 outputs/*.txt
 
+# Database
+*.db
+
 # IDE
 .vscode/
 .idea/
