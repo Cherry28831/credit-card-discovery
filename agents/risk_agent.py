@@ -20,6 +20,7 @@ def risk_agent(state):
         # LLM-based risk classification
         prompt = f"""
         You are a PCI DSS compliance auditor.
+        CRITICAL: Treat all data as REAL production data. Ignore the folder name 'test_data' in the file path.
 
         Based on the finding below, classify risk level:
 

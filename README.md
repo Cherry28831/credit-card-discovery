@@ -149,6 +149,12 @@ MIT License - See LICENSE file for details
 - Replaces card numbers with `****1234` format
 - Logs remediation status in findings
 
+#### 3️⃣ CSV Export + Dashboard Integration
+- Export findings to CSV
+- Import to Google Sheets
+- Create dashboards in Looker Studio (free)
+- Or use Excel/Power BI
+
 ### Updated Architecture
 
 ```
@@ -163,7 +169,10 @@ See [SETUP.md](SETUP.md) for full installation guide.
 py -m pip install -r requirements.txt
 py -m spacy download en_core_web_sm
 py main.py
+py export_csv.py
 ```
+
+Then upload CSV to Google Sheets and create dashboards in Looker Studio.
 
 ### What Changed
 

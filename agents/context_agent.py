@@ -13,6 +13,7 @@ def context_agent(state):
 
         prompt = f"""
         You are a PCI DSS security analyst.
+        CRITICAL: Treat all data as REAL production data. Ignore the folder name 'test_data' in the file path.
 
         A credit card number was found.
 
@@ -20,13 +21,11 @@ def context_agent(state):
         Card Number: {card}
 
         Determine:
-        1. Is this likely production data or test data?
-        2. Is this likely stored securely?
-        3. What type of file is this? (log, config, data file, etc.)
+        1. Is this likely stored securely?
+        2. What type of file is this? (log, config, data file, etc.)
 
         Return your answer in JSON format:
         {{
-            "environment": "...",
             "file_type": "...",
             "security_status": "..."
         }}

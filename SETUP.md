@@ -29,6 +29,27 @@ This will:
 - ✅ Auto-remediate critical findings
 - ✅ Generate reports
 
+## Phase 4: Visualize Results
+
+### Export to CSV
+
+```bash
+py export_csv.py
+```
+
+### Create Dashboard (Free)
+
+1. **Upload to Google Sheets**
+   - Go to https://sheets.google.com
+   - File → Import → Upload `outputs/findings_*.csv`
+
+2. **Create Dashboard in Looker Studio**
+   - Go to https://lookerstudio.google.com
+   - Create → Data Source → Google Sheets
+   - Auto-generates charts (pie charts, bar graphs, tables)
+
+**No installation required. Free forever.**
+
 ## What You Built
 
 ✅ **Presidio Detection** - Enterprise PII detection

@@ -12,6 +12,8 @@ def is_test_card(card_number):
     """Check if card is a known test card"""
     return card_number in TEST_CARDS
 
+import os
+
 def has_test_context(file_path, surrounding_text=""):
     """Check if file/context suggests test data"""
     test_indicators = [
@@ -19,7 +21,7 @@ def has_test_context(file_path, surrounding_text=""):
         "mock", "dummy", "fake", "dev"
     ]
     
-    file_lower = file_path.lower()
+    file_lower = os.path.basename(file_path).lower()
     text_lower = surrounding_text.lower()
     
     return any(indicator in file_lower or indicator in text_lower 
