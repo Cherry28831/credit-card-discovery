@@ -1,56 +1,88 @@
 from langchain_ollama import OllamaLLM
+from datetime import datetime
+import json
 
-llm = OllamaLLM(model="llama3", num_predict=600)
-
+llm = OllamaLLM(model="llama3", num_predict=800)
 
 def reporting_agent(state):
+    print("  Reporting: Generating AI-powered report...")
     findings = state["enriched_findings"]
     
     # Count by risk level
-    risk_counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "False Positive": 0}
+    risk_counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0}
     for f in findings:
-        risk = f.get("risk_level", "Unknown")
+        risk = f.get("risk_level", "Medium")
         if risk in risk_counts:
             risk_counts[risk] += 1
     
     total = len(findings)
     critical_high = risk_counts["Critical"] + risk_counts["High"]
 
-    prompt = f"""
-    Generate a professional PCI DSS compliance security report.
+    print(f"    Generating AI executive report for {total} findings...")
 
-    Total Findings: {total}
-    Critical: {risk_counts["Critical"]}
-    High: {risk_counts["High"]}
-    Medium: {risk_counts["Medium"]}
-    Low: {risk_counts["Low"]}
-    False Positives: {risk_counts["False Positive"]}
+    prompt = f"""Generate a professional PCI DSS compliance security report.
 
-    Sample Findings:
-    {findings[:3]}
+Scan Results:
+- Total Findings: {total}
+- Critical Risk: {risk_counts["Critical"]}
+- High Risk: {risk_counts["High"]}
+- Medium Risk: {risk_counts["Medium"]}
+- Low Risk: {risk_counts["Low"]}
 
-    Create a report with:
-    1. Executive Summary (2-3 sentences about the scan results)
-    2. Risk Summary (breakdown by severity)
-    3. Key Findings (highlight critical/high risks)
-    4. Recommendations (specific actions to take)
-    5. Compliance Status (PCI DSS implications)
+Sample Critical Findings:
+{json.dumps([f for f in findings if f.get('risk_level') == 'Critical'][:2], indent=2)}
+
+Create an executive report with:
+
+## Executive Summary
+3-4 sentences on security posture and key concerns.
+
+## Risk Analysis
+Breakdown by severity with specific concerns.
+
+## Critical Issues
+Detailed analysis of severe findings and impact.
+
+## Compliance Impact
+PCI DSS requirements affected and consequences.
+
+## Recommended Actions
+Prioritized remediation:
+1. Immediate (Critical/High)
+2. Short-term (Medium)
+3. Long-term (Low)
+
+## Conclusion
+Overall assessment and next steps.
+
+Write professionally for executive and technical audiences."""
+
+    try:
+        report_body = llm.invoke(prompt)
+    except:
+        report_body = "Report generation failed. Please review findings manually."
     
-    Keep it concise and actionable.
-    """
-
-    report = llm.invoke(prompt)
-    
-    # Add header
+    # Build full report
     full_report = f"""# Credit Card Data Discovery - Security Report
 
-**Scan Date:** {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Scan Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 **Total Findings:** {total}
 **Critical/High Risk:** {critical_high}
 
 ---
 
-{report}
+## Overview
+
+| Risk Level | Count | Percentage |
+|------------|-------|------------|
+| Critical   | {risk_counts['Critical']} | {risk_counts['Critical']/total*100:.1f}% |
+| High       | {risk_counts['High']} | {risk_counts['High']/total*100:.1f}% |
+| Medium     | {risk_counts['Medium']} | {risk_counts['Medium']/total*100:.1f}% |
+| Low        | {risk_counts['Low']} | {risk_counts['Low']/total*100:.1f}% |
+
+---
+
+{report_body}
 
 ---
 
@@ -58,15 +90,20 @@ def reporting_agent(state):
 
 """
     
-    # Add findings table
+    # Add findings details
     for i, f in enumerate(findings, 1):
-        full_report += f"""\n### Finding #{i}
-- **File:** `{f['file']}`
-- **Card:** `{f['card_number'][:4]}****{f['card_number'][-4:]}`
-- **Risk Level:** {f.get('risk_level', 'Unknown')}
-- **Context:** {f.get('context_analysis', 'N/A')[:100]}...
+        full_report += f"""\n### Finding #{i} - {f.get('risk_level', 'Unknown')} Risk
 
+**File:** `{f['file']}`  
+**Card:** `{f['card_number'][:4]}****{f['card_number'][-4:]}`  
+**Risk Level:** {f.get('risk_level', 'Unknown')}
+
+**Analysis:**
+{f.get('context_analysis', 'No analysis available')[:500]}...
+
+---
 """
 
     state["report"] = full_report
+    print("  AI executive report generated")
     return state

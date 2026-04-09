@@ -1,47 +1,62 @@
 from langchain_ollama import OllamaLLM
-from tools.false_positive_checker import is_test_card, has_test_context
 
 llm = OllamaLLM(model="llama3", num_predict=50)
 
 def risk_agent(state):
-    print("  [5/6] Risk: Classifying findings...")
+    print("  Risk: Classifying findings with AI...")
     updated = []
+    total = len(state["enriched_findings"])
+    
+    # Known test cards
+    test_cards = [
+        "4111111111111111", "4012888888881881", "5555555555554444",
+        "378282246310005", "6011111111111117", "3530111333300000"
+    ]
 
-    for item in state["enriched_findings"]:
+    print(f"    Processing {total} findings individually...")
+    
+    for idx, item in enumerate(state["enriched_findings"], 1):
         card = item["card_number"]
         file_path = item["file"]
+        context = item.get("context_analysis", "")
         
-        # Rule-based false positive check
-        if is_test_card(card) and has_test_context(file_path):
-            item["risk_level"] = "False Positive"
+        # Check for test cards in test environments
+        if card in test_cards and ("test" in file_path.lower() or "sample" in file_path.lower()):
+            item["risk_level"] = "Low"
             updated.append(item)
             continue
         
-        # LLM-based risk classification
-        prompt = f"""
-        You are a PCI DSS compliance auditor.
-        CRITICAL: Treat all data as REAL production data. Ignore the folder name 'test_data' in the file path.
+        # AI-based risk classification
+        prompt = f"""You are a PCI DSS compliance auditor.
 
-        Based on the finding below, classify risk level:
+Analyze this credit card exposure:
 
-        {item}
+File: {file_path}
+Card: {card[:4]}****{card[-4:]}
+Context: {context[:200]}
 
-        Risk Levels:
-        - Critical: Unencrypted card in logs or shared file
-        - High: Card data accessible broadly
-        - Medium: Test data in production
-        - Low: Masked card numbers
-        - False Positive
+Classify risk level:
 
-        Return ONLY one word:
-        Critical / High / Medium / Low / False Positive
-        """
+- Critical: Unencrypted cards in logs or production files
+- High: Card data in config files or backups
+- Medium: Cards in test environments with weak controls
+- Low: Properly masked or tokenized cards
 
-        risk = llm.invoke(prompt).strip()
+Respond with ONLY ONE WORD: Critical, High, Medium, or Low"""
 
+        try:
+            risk = llm.invoke(prompt).strip().split()[0]
+            if risk not in ["Critical", "High", "Medium", "Low"]:
+                risk = "Medium"
+        except:
+            risk = "Medium"
+        
         item["risk_level"] = risk
         updated.append(item)
+        
+        if idx % 5 == 0 or idx == total:
+            print(f"    Classified {idx}/{total}...")
 
     state["enriched_findings"] = updated
-    print(f"  ✓ Risk classification complete")
+    print(f"  Risk classification complete for {total} findings")
     return state
