@@ -88,7 +88,6 @@ else:
     # Top Level Metrics
     total_findings = len(df)
     critical_count = len(df[df["risk_level"] == "Critical"])
-    high_count = len(df[df["risk_level"] == "High"])
     medium_count = len(df[df["risk_level"] == "Medium"])
     low_count = len(df[df["risk_level"] == "Low"])
     
@@ -98,13 +97,12 @@ else:
     else:
         remediated_count = 0
 
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3, col4, col5 = st.columns(5)
     col1.metric("Total Findings", total_findings)
     col2.metric("Critical Risk", critical_count)
-    col3.metric("High Risk", high_count)
-    col4.metric("Medium Risk", medium_count)
-    col5.metric("Low Risk", low_count)
-    col6.metric("Remediated", remediated_count)
+    col3.metric("Medium Risk", medium_count)
+    col4.metric("Low Risk", low_count)
+    col5.metric("Remediated", remediated_count)
 
     st.markdown("---")
 
@@ -119,7 +117,6 @@ else:
             
             color_discrete_map = {
                 "Critical": "#FF4B4B",
-                "High": "#FFA421", 
                 "Medium": "#FFD166",
                 "Low": "#06D6A0"
             }

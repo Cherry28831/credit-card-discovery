@@ -38,15 +38,14 @@ Context: {context[:200]}
 Classify risk level:
 
 - Critical: Unencrypted cards in logs or production files
-- High: Card data in config files or backups
-- Medium: Cards in test environments with weak controls
+- Medium: Cards in test environments or config files
 - Low: Properly masked or tokenized cards
 
-Respond with ONLY ONE WORD: Critical, High, Medium, or Low"""
+Respond with ONLY ONE WORD: Critical, Medium, or Low"""
 
         try:
             risk = llm.invoke(prompt).strip().split()[0]
-            if risk not in ["Critical", "High", "Medium", "Low"]:
+            if risk not in ["Critical", "Medium", "Low"]:
                 risk = "Medium"
         except:
             risk = "Medium"

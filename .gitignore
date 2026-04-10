@@ -29,3 +29,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Google Drive credentials
+cloud/credentials.json
+cloud/token.pickle
