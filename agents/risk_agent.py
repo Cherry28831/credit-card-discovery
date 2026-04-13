@@ -1,6 +1,6 @@
-from langchain_ollama import OllamaLLM
+from config_bedrock import get_bedrock_llm
 
-llm = OllamaLLM(model="llama3", num_predict=50)
+llm = get_bedrock_llm(max_tokens=20, temperature=0.1)
 
 def risk_agent(state):
     print("  Risk: Classifying findings with AI...")
@@ -27,7 +27,9 @@ def risk_agent(state):
             continue
         
         # AI-based risk classification
-        prompt = f"""You are a PCI DSS compliance auditor.
+        prompt = f"""You are a PCI DSS compliance auditor testing a security scanning system.
+
+This application scans for exposed credit card data to help organizations identify compliance risks.
 
 Analyze this credit card exposure:
 
@@ -37,14 +39,20 @@ Context: {context[:200]}
 
 Classify risk level:
 
-- Critical: Unencrypted cards in logs or production files
-- Medium: Cards in test environments or config files
-- Low: Properly masked or tokenized cards
+- Critical: Production logs/databases with unencrypted cards, or cards in publicly accessible cloud storage
+- Medium: Development/test logs, config files, or backups with cards
+- Low: Known test cards (4111111111111111, 4012888888881881, etc.) in test environments
 
 Respond with ONLY ONE WORD: Critical, Medium, or Low"""
 
         try:
-            risk = llm.invoke(prompt).strip().split()[0]
+            response = llm.invoke(prompt)
+            # Extract text from AIMessage object
+            if hasattr(response, 'content'):
+                risk = response.content.strip().split()[0]
+            else:
+                risk = str(response).strip().split()[0]
+            
             if risk not in ["Critical", "Medium", "Low"]:
                 risk = "Medium"
         except:

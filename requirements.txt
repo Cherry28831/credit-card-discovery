@@ -1,6 +1,7 @@
 langchain
-langchain-ollama
+langchain-aws
 langgraph
 presidio-analyzer
 presidio-anonymizer
 spacy
+boto3

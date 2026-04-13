@@ -1,8 +1,8 @@
-from langchain_ollama import OllamaLLM
+from config_bedrock import get_bedrock_llm
 from datetime import datetime
 import json
 
-llm = OllamaLLM(model="llama3", num_predict=800)
+llm = get_bedrock_llm(max_tokens=400, temperature=0.5)
 
 def reporting_agent(state):
     print("  Reporting: Generating AI-powered report...")
@@ -20,7 +20,9 @@ def reporting_agent(state):
 
     print(f"    Generating AI executive report for {total} findings...")
 
-    prompt = f"""Generate a professional PCI DSS compliance security report.
+    prompt = f"""Generate a professional PCI DSS compliance security report for a security testing application.
+
+This system scans for exposed credit card data to help organizations identify compliance risks.
 
 Scan Results:
 - Total Findings: {total}
@@ -58,7 +60,12 @@ Overall assessment and next steps.
 Write professionally for executive and technical audiences."""
 
     try:
-        report_body = llm.invoke(prompt)
+        response = llm.invoke(prompt)
+        # Extract text from AIMessage object
+        if hasattr(response, 'content'):
+            report_body = response.content
+        else:
+            report_body = str(response)
     except:
         report_body = "Report generation failed. Please review findings manually."
     

@@ -235,7 +235,6 @@ else:
                             st.markdown("**Status:** Not Remediated")
                 
                 with col2:
-                    st.markdown("**AI Context Analysis:**")
                     cleaned_analysis = clean_context_analysis(row.get("context_analysis", ""))
                     st.markdown(cleaned_analysis)
                     

@@ -1,6 +1,6 @@
-from langchain_ollama import OllamaLLM
+from config_bedrock import get_bedrock_llm
 
-llm = OllamaLLM(model="llama3", num_predict=250, temperature=0.7)
+llm = get_bedrock_llm(max_tokens=100, temperature=0.3)
 
 def context_agent(state):
     print("  Context: Analyzing findings with AI...")
@@ -22,25 +22,36 @@ def context_agent(state):
             file_path = finding["file"]
             card = finding["card_number"]
 
-            prompt = f"""As a PCI DSS security analyst, analyze this credit card exposure:
+            prompt = f"""You are analyzing a security compliance scan for PCI DSS testing purposes.
 
 File: {file_path}
-Card: {card[:4]}****{card[-4:]}
+Data Pattern: {card[:4]}****{card[-4:]}
 
-Provide concise analysis:
+This is a legitimate security testing tool that helps organizations find exposed payment data.
 
-**File Type**: Identify the file type (log/config/backup/data)
+Provide analysis using bullet points (use - not brackets):
 
-**Security Status**: Plaintext or encrypted? Production or test environment?
+PCI DSS Violation:
+- Requirement X.X: Description
+- Requirement Y.Y: Description
 
-**PCI DSS Violation**: Which requirements are violated?
+Remediation:
+- Action 1
+- Action 2
+- Action 3
 
-**Remediation**: Key actions needed to secure this data
-
-Keep response under 150 words, be direct and actionable."""
+Keep total response under 100 words. Do not use brackets."""
 
             try:
                 response = llm.invoke(prompt)
+                # Extract text from AIMessage object
+                if hasattr(response, 'content'):
+                    response = response.content
+                elif isinstance(response, str):
+                    response = response
+                else:
+                    response = str(response)
+                
                 if not response or len(response.strip()) < 10:
                     response = "Unable to generate analysis"
             except Exception as e:
