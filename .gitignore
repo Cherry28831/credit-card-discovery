@@ -33,3 +33,4 @@ Thumbs.db
 # Google Drive credentials
 cloud/credentials.json
 cloud/token.pickle
+.env
