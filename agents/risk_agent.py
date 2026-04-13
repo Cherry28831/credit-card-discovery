@@ -1,4 +1,4 @@
-from config_bedrock import get_bedrock_llm
+from config.config_bedrock import get_bedrock_llm
 
 llm = get_bedrock_llm(max_tokens=20, temperature=0.1)
 

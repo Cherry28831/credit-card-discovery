@@ -1,4 +1,4 @@
-from config_bedrock import get_bedrock_llm
+from config.config_bedrock import get_bedrock_llm
 from datetime import datetime
 import json
 
