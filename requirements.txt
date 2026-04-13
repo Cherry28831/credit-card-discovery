@@ -4,3 +4,10 @@ langgraph
 presidio-analyzer
 presidio-anonymizer
 spacy
+streamlit
+plotly
+pandas
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
