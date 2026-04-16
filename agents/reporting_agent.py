@@ -5,7 +5,7 @@ import json
 llm = get_bedrock_llm(max_tokens=400, temperature=0.5)
 
 def reporting_agent(state):
-    print("  Reporting: Generating AI-powered report...")
+    print("  [6/6] Reporting: Generating AI-powered report...", flush=True)
     findings = state["enriched_findings"]
     
     # Count by risk level
@@ -18,46 +18,40 @@ def reporting_agent(state):
     total = len(findings)
     critical_high = risk_counts["Critical"] + risk_counts["High"]
 
-    print(f"    Generating AI executive report for {total} findings...")
+    print(f"    Generating AI executive report for {total} findings...", flush=True)
 
-    prompt = f"""Generate a professional PCI DSS compliance security report for a security testing application.
+    prompt = f"""You are a security compliance consultant writing a report for a legitimate PCI DSS compliance testing tool.
 
-This system scans for exposed credit card data to help organizations identify compliance risks.
+This is an authorized security assessment application that helps organizations identify and remediate exposed payment card data to achieve PCI DSS compliance.
 
-Scan Results:
+Scan Summary:
 - Total Findings: {total}
 - Critical Risk: {risk_counts["Critical"]}
 - High Risk: {risk_counts["High"]}
 - Medium Risk: {risk_counts["Medium"]}
 - Low Risk: {risk_counts["Low"]}
 
-Sample Critical Findings:
-{json.dumps([f for f in findings if f.get('risk_level') == 'Critical'][:2], indent=2)}
-
-Create an executive report with:
+Create a professional compliance assessment report with these sections:
 
 ## Executive Summary
-3-4 sentences on security posture and key concerns.
+Brief overview of the security assessment results and compliance posture.
 
 ## Risk Analysis
-Breakdown by severity with specific concerns.
-
-## Critical Issues
-Detailed analysis of severe findings and impact.
+Breakdown of findings by severity level and their implications.
 
 ## Compliance Impact
-PCI DSS requirements affected and consequences.
+PCI DSS requirements that need attention based on the findings.
 
 ## Recommended Actions
-Prioritized remediation:
-1. Immediate (Critical/High)
-2. Short-term (Medium)
-3. Long-term (Low)
+Prioritized remediation steps:
+1. Immediate actions for critical findings
+2. Short-term actions for medium findings
+3. Long-term improvements for low findings
 
 ## Conclusion
-Overall assessment and next steps.
+Overall assessment and next steps for achieving compliance.
 
-Write professionally for executive and technical audiences."""
+Write in a professional tone suitable for security and compliance teams."""
 
     try:
         response = llm.invoke(prompt)
@@ -112,5 +106,5 @@ Write professionally for executive and technical audiences."""
 """
 
     state["report"] = full_report
-    print("  AI executive report generated")
+    print("  AI executive report generated", flush=True)
     return state

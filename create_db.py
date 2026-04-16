@@ -17,25 +17,23 @@ CREATE TABLE IF NOT EXISTS findings (
     file TEXT,
     card_number TEXT,
     risk_level TEXT,
-    remediated TEXT,
+    remediation TEXT,
     scan_date TEXT,
-    context_analysis TEXT
+    context_analysis TEXT,
+    UNIQUE(file, card_number)
 )
 """)
 
-# Clear existing data
-cursor.execute("DELETE FROM findings")
-
-# Insert findings
+# Insert or replace findings (keeps existing + adds new)
 for finding in findings:
     cursor.execute("""
-        INSERT INTO findings (file, card_number, risk_level, remediated, scan_date, context_analysis)
+        INSERT OR REPLACE INTO findings (file, card_number, risk_level, remediation, scan_date, context_analysis)
         VALUES (?, ?, ?, ?, ?, ?)
     """, (
         finding.get("file", ""),
-        finding.get("card_number", "")[:4] + "****" + finding.get("card_number", "")[-4:],
+        finding.get("card_number", ""),
         finding.get("risk_level", "Unknown"),
-        "Yes" if finding.get("remediation") else "No",
+        finding.get("remediation", "Pending"),
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         finding.get("context_analysis", "No context provided.")
     ))

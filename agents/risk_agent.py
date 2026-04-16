@@ -3,7 +3,7 @@ from config.config_bedrock import get_bedrock_llm
 llm = get_bedrock_llm(max_tokens=20, temperature=0.1)
 
 def risk_agent(state):
-    print("  Risk: Classifying findings with AI...")
+    print("  [5/6] Risk: Classifying findings with AI...", flush=True)
     updated = []
     total = len(state["enriched_findings"])
     
@@ -13,7 +13,7 @@ def risk_agent(state):
         "378282246310005", "6011111111111117", "3530111333300000"
     ]
 
-    print(f"    Processing {total} findings individually...")
+    print(f"    Processing {total} findings individually...", flush=True)
     
     for idx, item in enumerate(state["enriched_findings"], 1):
         card = item["card_number"]
@@ -62,8 +62,8 @@ Respond with ONLY ONE WORD: Critical, Medium, or Low"""
         updated.append(item)
         
         if idx % 5 == 0 or idx == total:
-            print(f"    Classified {idx}/{total}...")
+            print(f"    Classified {idx}/{total}...", flush=True)
 
     state["enriched_findings"] = updated
-    print(f"  Risk classification complete for {total} findings")
+    print(f"  Risk classification complete for {total} findings", flush=True)
     return state

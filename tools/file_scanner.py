@@ -1,11 +1,19 @@
 import os
 
 
-def scan_files(folder_path):
+def scan_files(path):
     file_paths = []
-    for root, _, files in os.walk(folder_path):
-        for file in files:
-            file_paths.append(os.path.join(root, file))
+    
+    # Check if path is a file
+    if os.path.isfile(path):
+        return [path]
+    
+    # Otherwise treat as directory
+    if os.path.isdir(path):
+        for root, _, files in os.walk(path):
+            for file in files:
+                file_paths.append(os.path.join(root, file))
+    
     return file_paths
 
 

@@ -2,7 +2,7 @@ from tools.presidio_tool import detect_credit_cards
 
 
 def detection_agent(state):
-    print("  [2/6] Detection: Running Presidio (this may take 30s on first run)...")
+    print("  [2/6] Detection: Running Presidio (this may take 30s on first run)...", flush=True)
     potential = {}
 
     for file, text in state["raw_text"].items():
@@ -12,5 +12,5 @@ def detection_agent(state):
             potential[file] = cards
 
     state["potential_cards"] = potential
-    print(f"  ✓ Detected {sum(len(v) for v in potential.values())} potential cards")
+    print(f"  > Detected {sum(len(v) for v in potential.values())} potential cards", flush=True)
     return state
