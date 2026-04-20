@@ -1,0 +1,11 @@
+# Customer Export - Public S3 Bucket
+# WARNING: This file is publicly accessible at s3://company-public-exports/
+# Exported: 2024-01-15
+
+customer_id,name,email,card_number,expiry
+C1001,John Smith,john@email.com,4532015112830366,12/25
+C1002,Jane Doe,jane@email.com,5425233430109903,03/26
+C1003,Bob Wilson,bob@email.com,4916338506082832,08/24
+C1004,Alice Brown,alice@email.com,4539578763621486,11/25
+
+# File stored in public S3 bucket - CRITICAL SECURITY ISSUE

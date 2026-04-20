@@ -2,7 +2,7 @@ from config.config_bedrock import get_bedrock_llm
 from datetime import datetime
 import json
 
-llm = get_bedrock_llm(max_tokens=400, temperature=0.5)
+llm = get_bedrock_llm(max_tokens=800, temperature=0.5)
 
 def reporting_agent(state):
     print("  [6/6] Reporting: Generating AI-powered report...", flush=True)
@@ -34,7 +34,7 @@ Scan Summary:
 Create a professional compliance assessment report with these sections:
 
 ## Executive Summary
-Brief overview of the security assessment results and compliance posture.
+Brief overview of the security assessment results and compliance posture. DO NOT include the breakdown of findings by severity level here.
 
 ## Risk Analysis
 Breakdown of findings by severity level and their implications.
@@ -43,15 +43,17 @@ Breakdown of findings by severity level and their implications.
 PCI DSS requirements that need attention based on the findings.
 
 ## Recommended Actions
-Prioritized remediation steps:
-1. Immediate actions for critical findings
-2. Short-term actions for medium findings
-3. Long-term improvements for low findings
+Prioritized remediation steps with COMPLETE details:
+1. Immediate Actions for Critical Findings - provide full recommendations
+2. Short-term Actions for Medium Findings - provide full recommendations with complete sentences
+3. Long-term Improvements for Low Findings - provide full recommendations
+
+Make sure each action item is fully written out with complete details. Do not cut off sentences.
 
 ## Conclusion
 Overall assessment and next steps for achieving compliance.
 
-Write in a professional tone suitable for security and compliance teams."""
+Write in a professional tone suitable for security and compliance teams. Ensure all sections are complete and not truncated."""
 
     try:
         response = llm.invoke(prompt)
