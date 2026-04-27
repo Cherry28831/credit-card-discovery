@@ -813,7 +813,7 @@ if st.session_state.active_tab == 0:
                 unsafe_allow_html=True,
             )
             df["source"] = df["file"].apply(
-                lambda x: "Cloud" if x.startswith("gdrive://") else "Local"
+                lambda x: "S3" if x.startswith("s3://") else ("Cloud" if x.startswith("gdrive://") else "Local")
             )
             source_counts = df["source"].value_counts().reset_index()
             source_counts.columns = ["Source", "Count"]
@@ -824,7 +824,7 @@ if st.session_state.active_tab == 0:
                         y=source_counts["Count"],
                         marker=dict(
                             color=[
-                                {"Local": "#60a5fa", "Cloud": "#ffa94d"}[s]
+                                {"Local": "#60a5fa", "Cloud": "#ffa94d", "S3": "#b197fc"}[s]
                                 for s in source_counts["Source"]
                             ],
                             line=dict(color="#1e2535", width=1),
@@ -898,7 +898,7 @@ if st.session_state.active_tab == 0:
             '<div class="section-header" style="margin-top:20px">Findings Table</div>',
             unsafe_allow_html=True,
         )
-        fc1, fc2, fc3 = st.columns([2, 1, 1])
+        fc1, fc2, fc3, fc4 = st.columns([2, 1, 1, 1])
         with fc1:
             search_q = st.text_input(
                 "Search by file path",
@@ -921,6 +921,23 @@ if st.session_state.active_tab == 0:
                 label_visibility="collapsed",
                 key="overview_sort",
             )
+        with fc4:
+            if st.button("Clear All Findings", use_container_width=True, type="secondary", key="clear_findings_btn"):
+                try:
+                    if os.path.exists("outputs/findings.db"):
+                        os.remove("outputs/findings.db")
+                    if os.path.exists("outputs/findings.json"):
+                        os.remove("outputs/findings.json")
+                    if os.path.exists("outputs/report.txt"):
+                        os.remove("outputs/report.txt")
+                    if os.path.exists("outputs/scan.log"):
+                        os.remove("outputs/scan.log")
+                    load_data.clear()
+                    st.success("All findings cleared!")
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
         filtered = df[df["risk_level"].isin(selected_risks)].copy()
         if search_q:
@@ -990,12 +1007,14 @@ elif st.session_state.active_tab == 1:
     st.markdown(
         '<div class="section-header">Scan Sources</div>', unsafe_allow_html=True
     )
-    sc1, sc2, sc3 = st.columns(3)
+    sc1, sc2, sc3, sc4 = st.columns(4)
     with sc1:
         use_local = st.checkbox("Local File System", value=True)
     with sc2:
         use_cloud = st.checkbox("Google Drive (Cloud)", value=False)
     with sc3:
+        use_s3 = st.checkbox("AWS S3", value=False)
+    with sc4:
         use_sample = st.checkbox("Use Sample Files", value=False)
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -1034,6 +1053,32 @@ elif st.session_state.active_tab == 1:
                 st.warning(
                     "credentials.json not found — Google Drive scan will be skipped"
                 )
+    
+    if use_s3 and not use_sample:
+        st.markdown(
+            '<div class="section-header" style="margin-top:12px">AWS S3 Configuration</div>',
+            unsafe_allow_html=True,
+        )
+        s3_col1, s3_col2 = st.columns(2)
+        with s3_col1:
+            s3_bucket = st.text_input(
+                "S3 Bucket Name (optional - leave empty to scan all accessible buckets)",
+                placeholder="my-bucket-name",
+                help="Leave empty to scan all accessible buckets"
+            )
+        with s3_col2:
+            s3_prefix = st.text_input(
+                "S3 Prefix/Folder (optional)",
+                placeholder="logs/",
+                help="Optional folder path within bucket"
+            )
+        
+        st.info(
+            "💡 AWS credentials should be configured via:\n"
+            "- Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)\n"
+            "- AWS credentials file (~/.aws/credentials)\n"
+            "- IAM role (if running on EC2)"
+        )
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
@@ -1049,10 +1094,11 @@ elif st.session_state.active_tab == 1:
         )
     with col_status:
         if st.session_state.scan_status == "running":
-            st.markdown(
-                '<span class="status-dot dot-warn"></span><span style="color:#ffa94d;font-weight:600">Scan in progress...</span>',
-                unsafe_allow_html=True,
-            )
+            with st.spinner("Scan in progress..."):
+                st.markdown(
+                    '<span style="color:#ffa94d;font-weight:600">Scanning files and analyzing data...</span>',
+                    unsafe_allow_html=True,
+                )
         elif st.session_state.scan_status == "done":
             st.markdown(
                 '<span class="status-dot dot-ok"></span><span style="color:#51cf66;font-weight:600">Scan completed successfully</span>',
@@ -1063,6 +1109,11 @@ elif st.session_state.active_tab == 1:
                 '<span class="status-dot dot-err"></span><span style="color:#ff6b6b;font-weight:600">Scan encountered an error</span>',
                 unsafe_allow_html=True,
             )
+        elif st.session_state.scan_status == "stopped":
+            st.markdown(
+                '<span class="status-dot dot-warn"></span><span style="color:#ffa94d;font-weight:600">Scan stopped by user</span>',
+                unsafe_allow_html=True,
+            )
         else:
             st.markdown(
                 '<span class="status-dot" style="background:#334155"></span><span style="color:#64748b">Idle — configure options above and click Launch</span>',
@@ -1070,7 +1121,18 @@ elif st.session_state.active_tab == 1:
             )
 
     if launch:
-        target_path = paths[0] if paths else "sample_files"
+        # Determine scan mode based on selections
+        if use_s3 and not use_local and not use_cloud:
+            # S3 only mode
+            target_path = "--s3-only"
+        elif use_cloud and not use_local and not use_s3:
+            # Cloud only mode
+            target_path = "--cloud-only"
+        elif paths:
+            target_path = paths[0]
+        else:
+            target_path = "sample_files"
+        
         cmd = ["python", "main.py", target_path]
 
         st.session_state.scan_log = ""
@@ -1122,9 +1184,10 @@ elif st.session_state.active_tab == 1:
         st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
         pa1, pa2 = st.columns(2)
         with pa1:
-            if st.button("Refresh Dashboard", use_container_width=True):
+            if st.button("View Results", use_container_width=True, type="primary"):
                 load_data.clear()
                 st.session_state.scan_status = "idle"
+                st.session_state.scan_log = ""
                 st.session_state.active_tab = 0
                 st.rerun()
         with pa2:
@@ -1173,8 +1236,8 @@ elif st.session_state.active_tab == 2:
         with fc2:
             source_filter = st.multiselect(
                 "Source",
-                ["Local", "Cloud"],
-                default=["Local", "Cloud"],
+                ["Local", "Cloud", "S3"],
+                default=["Local", "Cloud", "S3"],
                 key="ai_source",
             )
         with fc3:
@@ -1183,10 +1246,19 @@ elif st.session_state.active_tab == 2:
             )
 
         filtered_df = df[df["risk_level"].isin(risk_filter)].copy()
-        if "Local" not in source_filter:
-            filtered_df = filtered_df[filtered_df["file"].str.startswith("gdrive://")]
-        if "Cloud" not in source_filter:
-            filtered_df = filtered_df[~filtered_df["file"].str.startswith("gdrive://")]
+        
+        # Apply source filters
+        if len(source_filter) < 3:  # Not all sources selected
+            mask = pd.Series([False] * len(filtered_df), index=filtered_df.index)
+            
+            if "Local" in source_filter:
+                mask |= ~(filtered_df["file"].str.startswith("gdrive://") | filtered_df["file"].str.startswith("s3://"))
+            if "Cloud" in source_filter:
+                mask |= filtered_df["file"].str.startswith("gdrive://")
+            if "S3" in source_filter:
+                mask |= filtered_df["file"].str.startswith("s3://")
+            
+            filtered_df = filtered_df[mask]
         if search_ai:
             filtered_df = filtered_df[
                 filtered_df["file"].str.contains(search_ai, case=False, na=False)
@@ -1200,11 +1272,17 @@ elif st.session_state.active_tab == 2:
         if len(filtered_df) > 0:
             for idx, (_, row) in enumerate(filtered_df.iterrows()):
                 risk = row.get("risk_level", "Unknown")
-                badge = get_badge(risk)
+                
+                # Use plain text for expander title
+                file_display = row['file'][:80] if len(row['file']) > 80 else row['file']
+                expander_title = f"{file_display} - {risk}"
 
-                with st.expander(
-                    f"{row['file'][:60]}... {badge}", expanded=(idx == 0)
-                ):
+                with st.expander(expander_title, expanded=(idx == 0)):
+                    # Show badge at the top of expander content
+                    badge = get_badge(risk)
+                    st.markdown(badge, unsafe_allow_html=True)
+                    st.markdown("---")
+                    
                     left, right = st.columns([1, 3])
                     with left:
                         card_str = str(row["card_number"])
@@ -1214,11 +1292,10 @@ elif st.session_state.active_tab == 2:
                             else card_str
                         )
                         st.markdown(f"**Card:** `{masked}`")
-                        st.markdown(badge, unsafe_allow_html=True)
                         source_lbl = (
-                            "Cloud"
-                            if str(row["file"]).startswith("gdrive://")
-                            else "Local"
+                            "S3"
+                            if str(row["file"]).startswith("s3://")
+                            else ("Cloud" if str(row["file"]).startswith("gdrive://") else "Local")
                         )
                         st.markdown(f"**Source:** {source_lbl}")
                         if "remediation" in row and row["remediation"]:
@@ -1256,6 +1333,8 @@ elif st.session_state.active_tab == 2:
                             type="primary",
                         ):
                             try:
+                                is_s3 = str(row["file"]).startswith("s3://")
+                                
                                 success, message, remediated_path = remediate_finding(
                                     row["file"], row["card_number"]
                                 )
@@ -1263,7 +1342,9 @@ elif st.session_state.active_tab == 2:
                                 if not success:
                                     st.error(message)
                                 else:
-                                    if "Google Drive" in message:
+                                    if is_s3:
+                                        st.success("Remediated and uploaded to S3!")
+                                    elif "Google Drive" in message:
                                         st.success(
                                             "Remediated locally and uploaded to Google Drive!"
                                         )
@@ -1287,6 +1368,12 @@ elif st.session_state.active_tab == 2:
                                         )
                                     """
                                     )
+                                    
+                                    # Update message for display
+                                    display_message = message
+                                    if is_s3:
+                                        display_message = f"Masked and uploaded to S3: {remediated_path}"
+                                    
                                     rem_cursor.execute(
                                         """
                                         INSERT INTO remediated_findings
@@ -1298,7 +1385,7 @@ elif st.session_state.active_tab == 2:
                                             remediated_path,
                                             row["card_number"],
                                             row["risk_level"],
-                                            message,
+                                            display_message,
                                             row["scan_date"],
                                             datetime.now().strftime(
                                                 "%Y-%m-%d %H:%M:%S"
@@ -1378,7 +1465,7 @@ elif st.session_state.active_tab == 3:
             )
         with fc3:
             if st.button(
-                "Clear Remediated Data", use_container_width=True, type="secondary"
+                "Clear Remediated Data", use_container_width=True, type="secondary", key="clear_all_rem_btn"
             ):
                 try:
                     if os.path.exists("outputs/remediated.db"):
@@ -1386,7 +1473,7 @@ elif st.session_state.active_tab == 3:
                     if os.path.exists("outputs/remediated_files"):
                         shutil.rmtree("outputs/remediated_files")
                     load_remediated_data.clear()
-                    st.success("All remediated data cleared!")
+                    st.success("Remediated data cleared!")
                     time.sleep(1)
                     st.rerun()
                 except Exception as e:
@@ -1417,11 +1504,18 @@ elif st.session_state.active_tab == 3:
         if len(filtered_rem) > 0:
             for idx, (_, row) in enumerate(filtered_rem.iterrows()):
                 risk = row.get("risk_level", "Unknown")
-                badge = get_badge(risk)
                 display_name = row.get("original_file", row.get("file", "Unknown"))
+                
+                # Use plain text for expander title
+                file_display = display_name[:80] if len(display_name) > 80 else display_name
+                expander_title = f"{file_display} - {risk}"
 
-                with st.expander(f"{display_name[:60]}... {badge}"):
+                with st.expander(expander_title):
+                    # Show badge at the top of expander content
+                    badge = get_badge(risk)
                     st.markdown(badge, unsafe_allow_html=True)
+                    st.markdown("---")
+                    
                     left, right = st.columns([1, 3])
                     with left:
                         card_str = str(row["card_number"])
@@ -1431,7 +1525,6 @@ elif st.session_state.active_tab == 3:
                             else card_str
                         )
                         st.markdown(f"**Card:** `{masked}`")
-                        st.markdown(badge, unsafe_allow_html=True)
                         st.markdown(f"**Status:** Remediated")
                         st.markdown(f"**Scanned:** {row['scan_date']}")
                         st.markdown(f"**Remediated:** {row['remediation_date']}")

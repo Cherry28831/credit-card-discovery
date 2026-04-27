@@ -4,11 +4,12 @@ An AI-powered multi-agent system for detecting, validating, and classifying cred
 
 ## Features
 
-- **Automated Discovery**: Scans directories for potential credit card data
+- **Automated Discovery**: Scans local directories, Google Drive, and AWS S3 for potential credit card data
 - **Smart Detection**: Uses regex patterns to identify card numbers
 - **Luhn Validation**: Validates card numbers using the Luhn algorithm
 - **AI Context Analysis**: LLM-powered analysis of file context and security posture
 - **Risk Classification**: Automatic risk scoring (Critical/High/Medium/Low/False Positive)
+- **S3 Remediation**: Automatically mask sensitive data in S3 and upload to remediated location
 - **Compliance Reporting**: Generates PCI DSS compliance reports
 
 ## Architecture
@@ -180,5 +181,30 @@ Then upload CSV to Google Sheets and create dashboards in Looker Studio.
 |-----------|--------|-------|
 | Detection | Regex patterns | Presidio AI |
 | Remediation | Manual | Automatic masking |
+| Sources | Local only | Local + Google Drive + AWS S3 |
+| S3 Remediation | Not supported | Download → Mask → Upload to s3://bucket/remediated/ |
 
-This is now an **Autonomous PCI DSS Compliance Discovery Agent**.
+### S3 Integration
+
+#### Scanning S3 Buckets
+- Scan single or multiple S3 buckets
+- Filter by prefix/folder
+- Automatic credential detection (env vars, AWS CLI, IAM roles)
+- See [S3_SETUP.md](S3_SETUP.md) and [S3_QUICKSTART.md](S3_QUICKSTART.md)
+
+#### S3 Remediation
+- Automatically remediate findings in S3
+- Downloads file, masks card numbers, uploads to `s3://bucket/remediated/path`
+- Original files remain untouched
+- See [S3_REMEDIATION.md](S3_REMEDIATION.md) for details
+
+#### Testing S3
+```bash
+# Create test bucket with realistic data
+py setup_realistic_s3.py
+
+# Test remediation
+py test_s3_remediation.py
+```
+
+This is now an **Autonomous PCI DSS Compliance Discovery Agent** with full cloud support.
