@@ -1,22 +1,18 @@
-# 🔐 SecureScan - Credit Card Data Discovery System
+# SecureScan - Credit Card Data Discovery System
 
 An AI-powered autonomous compliance system for detecting, validating, and remediating credit card data exposure across local filesystems and cloud storage (AWS S3).
 
-![Version](https://img.shields.io/badge/version-4.0-blue)
-![Python](https://img.shields.io/badge/python-3.8+-green)
-![License](https://img.shields.io/badge/license-MIT-orange)
-
 ### Key Features
 
-✅ **Multi-Source Scanning** - Local filesystems, AWS S3 buckets
-✅ **AI-Powered Detection** - Microsoft Presidio + Luhn validation (99.9% accuracy)
-✅ **Risk Analysis** - AWS Bedrock LLM context analysis and classification
-✅ **Auto-Remediation** - One-click card masking with S3 upload
-✅ **Interactive Dashboard** - Real-time progress, analytics, and reporting
+- **Multi-Source Scanning** - Local filesystems, AWS S3 buckets
+- **AI-Powered Detection** - Microsoft Presidio + Luhn validation (99.9% accuracy)
+- **Risk Analysis** - AWS Bedrock LLM context analysis and classification
+- **Auto-Remediation** - One-click card masking with S3 upload
+- **Interactive Dashboard** - Real-time progress, analytics, and reporting
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌─────────────┐
@@ -42,7 +38,7 @@ An AI-powered autonomous compliance system for detecting, validating, and remedi
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Python 3.8+
 - AWS Account (for Bedrock LLM)
@@ -50,7 +46,7 @@ An AI-powered autonomous compliance system for detecting, validating, and remedi
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Installation
 
@@ -104,7 +100,7 @@ py main.py C:\path --s3
 
 ---
 
-## 🔍 How Detection Works
+## How Detection Works
 
 ### Step 1: Pattern Detection (Presidio)
 
@@ -127,7 +123,7 @@ py main.py C:\path --s3
 
 ---
 
-## 📊 Dashboard Features
+## Dashboard Features
 
 - **Overview**: Metrics, charts, findings table
 - **Run Scan**: Source selection, real-time progress
@@ -137,7 +133,7 @@ py main.py C:\path --s3
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 .
@@ -155,7 +151,7 @@ py main.py C:\path --s3
 
 ---
 
-## 📖 Documentation
+## Documentation
 
 - [Setup Guide](SETUP.md)
 - [AWS Bedrock Setup](BEDROCK_SETUP.md)
@@ -165,7 +161,7 @@ py main.py C:\path --s3
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Test with sample files
@@ -183,7 +179,7 @@ py -c "from cloud.s3_scanner import test_s3_connection; test_s3_connection()"
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 **Scan not starting?**
 
@@ -199,13 +195,13 @@ py -c "from cloud.s3_scanner import test_s3_connection; test_s3_connection()"
 
 ---
 
-## 📝 License
+## License
 
 MIT License - See [LICENSE](LICENSE)
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Microsoft Presidio** - PII detection
 - **AWS Bedrock** - LLM analysis
@@ -213,4 +209,4 @@ MIT License - See [LICENSE](LICENSE)
 
 ---
 
-**Built with ❤️ for PCI DSS Compliance**
+**Built with care for PCI DSS Compliance**
