@@ -96,6 +96,10 @@ def scan_bucket(s3_client, bucket_name, prefix='', max_files=100):
                 key = obj['Key']
                 size = obj['Size']
                 
+                # Skip remediated files
+                if 'remediated/' in key.lower() or key.lower().startswith('remediated/'):
+                    continue
+                
                 # Skip if file is too large (> 10MB)
                 if size > 10 * 1024 * 1024:
                     continue

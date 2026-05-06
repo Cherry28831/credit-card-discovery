@@ -31,6 +31,10 @@ st.markdown(
     /* ═══════════════════════════════════════════════════════════════════════ */
     /* ANIMATIONS & KEYFRAMES */
     /* ═══════════════════════════════════════════════════════════════════════ */
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
@@ -412,6 +416,17 @@ st.markdown(
     /* ═══════════════════════════════════════════════════════════════════════ */
     /* STATUS INDICATORS */
     /* ═══════════════════════════════════════════════════════════════════════ */
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,169,77,0.3);
+        border-top-color: #ffa94d;
+        border-radius: 50%;
+        animation: rotate 0.8s linear infinite;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
     .status-dot {
         display: inline-block;
         width: 10px;
@@ -579,8 +594,15 @@ def stop_scan():
 def run_scan_background(cmd, log_key, status_key, done_key):
     global current_scan_process
     try:
+        # Clear log file
         with open("outputs/scan.log", "w") as f:
             f.write("")
+        
+        # Log the command being run
+        init_msg = f"Executing command: {' '.join(cmd)}\n\n"
+        st.session_state[log_key] = init_msg
+        with open("outputs/scan.log", "a", encoding="utf-8") as f:
+            f.write(init_msg)
 
         if sys.platform == "win32":
             current_scan_process = subprocess.Popen(
@@ -588,7 +610,7 @@ def run_scan_background(cmd, log_key, status_key, done_key):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=0,
+                bufsize=1,
                 universal_newlines=True,
                 env={**os.environ, "PYTHONUNBUFFERED": "1"},
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
@@ -599,7 +621,7 @@ def run_scan_background(cmd, log_key, status_key, done_key):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=0,
+                bufsize=1,
                 universal_newlines=True,
                 env={**os.environ, "PYTHONUNBUFFERED": "1"},
                 preexec_fn=os.setsid,
@@ -609,7 +631,31 @@ def run_scan_background(cmd, log_key, status_key, done_key):
             if line:
                 if st.session_state.get(status_key) == "running":
                     st.session_state[log_key] = st.session_state.get(log_key, "") + line
-                    with open("outputs/scan.log", "a") as f:
+                    
+                    # Update progress based on log content
+                    line_lower = line.lower()
+                    if "[1/6]" in line or "discovery" in line_lower:
+                        st.session_state["scan_progress"] = "🔍 Discovering files..."
+                    elif "[2/6]" in line or "detection" in line_lower:
+                        st.session_state["scan_progress"] = "🔎 Detecting credit cards..."
+                    elif "[3/6]" in line or "validation" in line_lower:
+                        st.session_state["scan_progress"] = "✓ Validating cards..."
+                    elif "[4/6]" in line or "context" in line_lower:
+                        st.session_state["scan_progress"] = "🤖 AI analysis in progress..."
+                    elif "[5/6]" in line or "risk" in line_lower:
+                        st.session_state["scan_progress"] = "⚠️ Classifying risks..."
+                    elif "[6/6]" in line or "reporting" in line_lower:
+                        st.session_state["scan_progress"] = "📊 Generating report..."
+                    elif "database created" in line_lower:
+                        st.session_state["scan_progress"] = "💾 Finalizing..."
+                    elif "total findings" in line_lower:
+                        st.session_state["scan_progress"] = "✅ Scan complete!"
+                    elif "starting" in line_lower:
+                        st.session_state["scan_progress"] = "🚀 Starting scan..."
+                    elif "scanning" in line_lower:
+                        st.session_state["scan_progress"] = "📂 Scanning files..."
+                    
+                    with open("outputs/scan.log", "a", encoding="utf-8") as f:
                         f.write(line)
                 else:
                     break
@@ -620,11 +666,13 @@ def run_scan_background(cmd, log_key, status_key, done_key):
             st.session_state[status_key] = (
                 "done" if current_scan_process.returncode == 0 else "error"
             )
+            if current_scan_process.returncode == 0:
+                st.session_state["scan_progress"] = "✅ Scan complete!"
     except Exception as e:
         error_msg = f"\nError: {e}"
         if st.session_state.get(status_key) != "stopped":
             st.session_state[log_key] = st.session_state.get(log_key, "") + error_msg
-            with open("outputs/scan.log", "a") as f:
+            with open("outputs/scan.log", "a", encoding="utf-8") as f:
                 f.write(error_msg)
             st.session_state[status_key] = "error"
     finally:
@@ -813,7 +861,7 @@ if st.session_state.active_tab == 0:
                 unsafe_allow_html=True,
             )
             df["source"] = df["file"].apply(
-                lambda x: "S3" if x.startswith("s3://") else ("Cloud" if x.startswith("gdrive://") else "Local")
+                lambda x: "S3" if x.startswith("s3://") else "Local"
             )
             source_counts = df["source"].value_counts().reset_index()
             source_counts.columns = ["Source", "Count"]
@@ -824,7 +872,7 @@ if st.session_state.active_tab == 0:
                         y=source_counts["Count"],
                         marker=dict(
                             color=[
-                                {"Local": "#60a5fa", "Cloud": "#ffa94d", "S3": "#b197fc"}[s]
+                                {"Local": "#60a5fa", "S3": "#b197fc"}.get(s, "#94a3b8")
                                 for s in source_counts["Source"]
                             ],
                             line=dict(color="#1e2535", width=1),
@@ -1003,57 +1051,65 @@ elif st.session_state.active_tab == 1:
         unsafe_allow_html=True,
     )
 
+    # Initialize checkbox states in session state
+    if "use_local" not in st.session_state:
+        st.session_state.use_local = False
+    if "use_s3" not in st.session_state:
+        st.session_state.use_s3 = False
+    if "use_sample" not in st.session_state:
+        st.session_state.use_sample = True
+
     # --- Source selection ---
     st.markdown(
         '<div class="section-header">Scan Sources</div>', unsafe_allow_html=True
     )
-    sc1, sc2, sc3, sc4 = st.columns(4)
+    sc1, sc2, sc3 = st.columns(3)
     with sc1:
-        use_local = st.checkbox("Local File System", value=True)
+        use_local = st.checkbox("Local File System", value=st.session_state.use_local, key="chk_local")
+        st.session_state.use_local = use_local
     with sc2:
-        use_cloud = st.checkbox("Google Drive (Cloud)", value=False)
+        use_s3 = st.checkbox("AWS S3", value=st.session_state.use_s3, key="chk_s3")
+        st.session_state.use_s3 = use_s3
     with sc3:
-        use_s3 = st.checkbox("AWS S3", value=False)
-    with sc4:
-        use_sample = st.checkbox("Use Sample Files", value=False)
+        use_sample = st.checkbox("Use Sample Files", value=st.session_state.use_sample, key="chk_sample")
+        st.session_state.use_sample = use_sample
+    
+    use_cloud = False
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
     # --- Path input ---
+    paths = []
     if use_local and not use_sample:
         st.markdown(
             '<div class="section-header">Local Paths</div>', unsafe_allow_html=True
         )
         path_input = st.text_area(
             "Enter one or more paths (one per line)",
-            placeholder="/var/log/app.log\n/home/user/documents\nC:\\Users\\user\\Desktop\\files",
+            placeholder="C:\\Users\\YourName\\Documents\\test_folder\nC:\\temp\\logs",
             height=110,
             label_visibility="collapsed",
+            key="path_input",
         )
         paths = [p.strip() for p in path_input.strip().splitlines() if p.strip()]
+        
+        if paths:
+            # Validate paths
+            invalid_paths = []
+            for p in paths:
+                if not os.path.exists(p):
+                    invalid_paths.append(p)
+            
+            if invalid_paths:
+                st.error(f"⚠️ Invalid paths: {', '.join(invalid_paths)}")
     elif use_sample:
         paths = ["sample_files"]
-        st.info("Will scan the built-in `sample_files/` directory.")
-    else:
-        paths = []
-
-    if use_cloud and not use_sample:
-        st.markdown(
-            '<div class="section-header" style="margin-top:12px">Cloud Configuration</div>',
-            unsafe_allow_html=True,
-        )
-        gdrive_col1, gdrive_col2 = st.columns(2)
-        with gdrive_col1:
-            creds_file = st.text_input(
-                "credentials.json path", value="cloud/credentials.json"
-            )
-        with gdrive_col2:
-            st.markdown("<br>", unsafe_allow_html=True)
-            if not os.path.exists(creds_file):
-                st.warning(
-                    "credentials.json not found — Google Drive scan will be skipped"
-                )
+        st.info("✓ Will scan the built-in `sample_files/` directory.")
     
+    # Validation message
+    if use_local and not use_sample and not paths:
+        st.warning("⚠️ Please enter at least one valid path to scan local files, or enable 'Use Sample Files'.")
+
     if use_s3 and not use_sample:
         st.markdown(
             '<div class="section-header" style="margin-top:12px">AWS S3 Configuration</div>',
@@ -1084,21 +1140,41 @@ elif st.session_state.active_tab == 1:
 
     # --- Scan status & launch ---
     scan_running = st.session_state.scan_status == "running"
+    
+    # Determine if we can launch
+    can_launch = False
+    validation_msg = ""
+    
+    if use_sample:
+        can_launch = True
+    elif use_local and paths:
+        # Check if paths exist
+        valid_paths = [p for p in paths if os.path.exists(p)]
+        if valid_paths:
+            can_launch = True
+        else:
+            validation_msg = "No valid paths provided"
+    elif use_s3:
+        can_launch = True
+    else:
+        validation_msg = "Please select at least one scan source and provide valid paths"
+    
     col_btn, col_status = st.columns([1, 3])
     with col_btn:
         launch = st.button(
             "Launch Scan" if not scan_running else "Scanning...",
             type="primary",
             use_container_width=True,
-            disabled=scan_running,
+            disabled=scan_running or not can_launch,
         )
     with col_status:
         if st.session_state.scan_status == "running":
-            with st.spinner("Scan in progress..."):
-                st.markdown(
-                    '<span style="color:#ffa94d;font-weight:600">Scanning files and analyzing data...</span>',
-                    unsafe_allow_html=True,
-                )
+            # Show current scan progress with spinner
+            progress_text = st.session_state.get("scan_progress", "Initializing scan...")
+            st.markdown(
+                f'<span class="spinner"></span><span style="color:#ffa94d;font-weight:600">{progress_text}</span>',
+                unsafe_allow_html=True,
+            )
         elif st.session_state.scan_status == "done":
             st.markdown(
                 '<span class="status-dot dot-ok"></span><span style="color:#51cf66;font-weight:600">Scan completed successfully</span>',
@@ -1114,31 +1190,63 @@ elif st.session_state.active_tab == 1:
                 '<span class="status-dot dot-warn"></span><span style="color:#ffa94d;font-weight:600">Scan stopped by user</span>',
                 unsafe_allow_html=True,
             )
+        elif not can_launch and validation_msg:
+            st.markdown(
+                f'<span class="status-dot dot-err"></span><span style="color:#ff6b6b;font-weight:600">{validation_msg}</span>',
+                unsafe_allow_html=True,
+            )
         else:
             st.markdown(
-                '<span class="status-dot" style="background:#334155"></span><span style="color:#64748b">Idle — configure options above and click Launch</span>',
+                '<span class="status-dot" style="background:#334155"></span><span style="color:#64748b">Ready to scan — click Launch when ready</span>',
                 unsafe_allow_html=True,
             )
 
     if launch:
-        # Determine scan mode based on selections
-        if use_s3 and not use_local and not use_cloud:
-            # S3 only mode
-            target_path = "--s3-only"
-        elif use_cloud and not use_local and not use_s3:
-            # Cloud only mode
-            target_path = "--cloud-only"
-        elif paths:
-            target_path = paths[0]
-        else:
-            target_path = "sample_files"
+        # Build command based on selected sources
+        cmd = ["py", "main.py"]
         
-        cmd = ["python", "main.py", target_path]
-
-        st.session_state.scan_log = ""
+        # Determine target path
+        if use_sample:
+            cmd.append("sample_files")
+        elif use_local and paths:
+            # Use first valid path
+            valid_paths = [p for p in paths if os.path.exists(p)]
+            if valid_paths:
+                cmd.append(valid_paths[0])
+            else:
+                st.error("No valid paths found!")
+                st.stop()
+        elif use_s3:
+            # S3 only - use dummy path
+            cmd.append(".")
+        else:
+            st.error("Please select at least one scan source.")
+            st.stop()
+        
+        # Add flags based on selected sources
+        if use_s3:
+            cmd.append("--s3")
+        
+        if use_s3 and not use_local and not use_sample:
+            cmd.append("--skip-local")
+        
+        # Show what we're scanning
+        sources_list = []
+        if use_sample:
+            sources_list.append("Sample Files")
+        if use_local and paths and not use_sample:
+            sources_list.append(f"Local: {paths[0]}")
+        if use_s3:
+            sources_list.append("AWS S3")
+        
+        st.session_state.scan_log = f"Starting scan...\nSources: {', '.join(sources_list)}\nCommand: {' '.join(cmd)}\n\n"
         st.session_state.scan_status = "running"
         st.session_state.scan_done = False
+        st.session_state.scan_progress = "Initializing scan..."
         load_data.clear()
+        
+        print(f"DEBUG: Launching scan with command: {cmd}", flush=True)
+        print(f"DEBUG: use_s3={use_s3}, use_local={use_local}, use_sample={use_sample}", flush=True)
 
         thread = threading.Thread(
             target=run_scan_background,
@@ -1157,16 +1265,16 @@ elif st.session_state.active_tab == 1:
 
         log_lines = st.session_state.scan_log.splitlines()
         colored = []
-        for line in log_lines[-80:]:
+        for line in log_lines[-100:]:
             if any(
                 k in line
-                for k in ["✓", "complete", "Done", "success", "generated", "saved"]
+                for k in ["✓", "complete", "Done", "success", "generated", "saved", "created"]
             ):
                 colored.append(f'<span class="log-line-ok">{line}</span>')
             elif any(k in line for k in ["Error", "error", "fail", "Fail", "WARN"]):
                 colored.append(f'<span class="log-line-err">{line}</span>')
             elif any(
-                k in line for k in ["[", "Scanning", "Processing", "Classif", "Generat"]
+                k in line for k in ["[", "Scanning", "Processing", "Classif", "Generat", "Starting", "Sources"]
             ):
                 colored.append(f'<span class="log-line-info">{line}</span>')
             else:
@@ -1176,8 +1284,16 @@ elif st.session_state.active_tab == 1:
         st.markdown(f'<div class="log-box">{log_html}</div>', unsafe_allow_html=True)
 
         if scan_running:
-            time.sleep(1.5)
-            st.rerun()
+            # Check if scan is actually done by looking at the log
+            log_content = st.session_state.scan_log.lower()
+            if "database created" in log_content or "next steps" in log_content or "total findings" in log_content:
+                st.session_state.scan_status = "done"
+                st.session_state.scan_done = True
+                load_data.clear()
+                st.rerun()
+            else:
+                time.sleep(1.5)
+                st.rerun()
 
     # --- Post-scan actions ---
     if st.session_state.scan_status == "done":
@@ -1236,8 +1352,8 @@ elif st.session_state.active_tab == 2:
         with fc2:
             source_filter = st.multiselect(
                 "Source",
-                ["Local", "Cloud", "S3"],
-                default=["Local", "Cloud", "S3"],
+                ["Local", "S3"],
+                default=["Local", "S3"],
                 key="ai_source",
             )
         with fc3:
@@ -1248,13 +1364,11 @@ elif st.session_state.active_tab == 2:
         filtered_df = df[df["risk_level"].isin(risk_filter)].copy()
         
         # Apply source filters
-        if len(source_filter) < 3:  # Not all sources selected
+        if len(source_filter) < 2:  # Not all sources selected
             mask = pd.Series([False] * len(filtered_df), index=filtered_df.index)
             
             if "Local" in source_filter:
-                mask |= ~(filtered_df["file"].str.startswith("gdrive://") | filtered_df["file"].str.startswith("s3://"))
-            if "Cloud" in source_filter:
-                mask |= filtered_df["file"].str.startswith("gdrive://")
+                mask |= ~filtered_df["file"].str.startswith("s3://")
             if "S3" in source_filter:
                 mask |= filtered_df["file"].str.startswith("s3://")
             

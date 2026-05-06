@@ -7,25 +7,27 @@ import os
 def discovery_agent(state):
     print("  [1/6] Discovery: Scanning files...", flush=True)
     folder_path = state.get("folder_path", "")
+    scan_cloud = state.get("scan_cloud", False)
+    enable_s3 = state.get("scan_s3", False)
+    scan_local = state.get("scan_local", True)
+    
+    print(f"    > Debug - enable_s3={enable_s3}, scan_local={scan_local}, scan_cloud={scan_cloud}", flush=True)
     
     files = []
     raw_text = {}
     
-    # Check for special scan modes
-    s3_only = folder_path == "--s3-only"
-    cloud_only = folder_path == "--cloud-only"
-    
-    # Scan local files (unless S3-only or cloud-only mode)
-    if not s3_only and not cloud_only:
+    # Scan local files if enabled
+    if scan_local:
+        print(f"    > Scanning local path: {folder_path}", flush=True)
         files = scan_files(folder_path)
         for file in files:
             raw_text[file] = read_file(file)
         print(f"    > Found {len(files)} local files", flush=True)
+    else:
+        print("    > Local scanning disabled", flush=True)
     
-    is_specific_file = os.path.isfile(folder_path) if folder_path and not folder_path.startswith("--") else False
-    
-    # Scan Google Drive
-    if (cloud_only or not is_specific_file) and not s3_only:
+    # Scan Google Drive if enabled
+    if scan_cloud:
         if os.path.exists("cloud/credentials.json"):
             print("    > Scanning Google Drive...", flush=True)
             drive_files = scan_drive()
@@ -35,10 +37,10 @@ def discovery_agent(state):
         else:
             print("    > Skipping Google Drive (no credentials)", flush=True)
     
-    # Scan AWS S3
-    if (s3_only or not is_specific_file) and not cloud_only:
+    # Scan AWS S3 if enabled
+    if enable_s3:
+        print("    > S3 scanning enabled, calling scan_s3()...", flush=True)
         try:
-            print("    > Scanning AWS S3...", flush=True)
             s3_files = scan_s3()
             if s3_files:
                 raw_text.update(s3_files)
@@ -48,6 +50,8 @@ def discovery_agent(state):
                 print("    > No S3 files found or credentials not configured", flush=True)
         except Exception as e:
             print(f"    > Skipping S3 (error: {e})", flush=True)
+    else:
+        print("    > S3 scanning disabled", flush=True)
 
     state["files"] = files
     state["raw_text"] = raw_text

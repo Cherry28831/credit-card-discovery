@@ -13,11 +13,14 @@ def print_flush(msg):
     """Print with immediate flush for real-time output"""
     print(msg, flush=True)
 
-def run_pipeline(folder_path="sample_files"):
+def run_pipeline(folder_path="sample_files", scan_cloud=True, scan_s3=True, scan_local=True):
     """Run the credit card discovery pipeline"""
     
     state = {
         "folder_path": folder_path,
+        "scan_cloud": scan_cloud,
+        "scan_s3": scan_s3,
+        "scan_local": scan_local,
         "files": [],
         "raw_text": {},
         "potential_cards": {},
@@ -50,15 +53,45 @@ def run_pipeline(folder_path="sample_files"):
 if __name__ == "__main__":
     print_flush("Starting Autonomous Compliance System...")
     
-    # Check for command line argument
-    if len(sys.argv) > 1:
-        scan_path = sys.argv[1]
-        print_flush(f"Scanning custom path: {scan_path}")
-    else:
-        scan_path = "sample_files"
-        print_flush("Scanning sample_files folder...")
+    # Parse command line arguments
+    scan_path = "sample_files"
+    scan_cloud = False
+    scan_s3 = False
+    scan_local = True
     
-    final_state = run_pipeline(scan_path)
+    args = sys.argv[1:]
+    print_flush(f"Command line args: {args}")
+    
+    for arg in args:
+        if arg == "--cloud":
+            scan_cloud = True
+            print_flush("  Enabled: Google Drive")
+        elif arg == "--s3":
+            scan_s3 = True
+            print_flush("  Enabled: AWS S3")
+        elif arg == "--skip-local":
+            scan_local = False
+            print_flush("  Disabled: Local scanning")
+        elif not arg.startswith("--"):
+            scan_path = arg
+            print_flush(f"  Path: {scan_path}")
+    
+    # Display scan configuration
+    sources = []
+    if scan_local:
+        sources.append("Local")
+    if scan_cloud:
+        sources.append("Google Drive")
+    if scan_s3:
+        sources.append("AWS S3")
+    
+    print_flush(f"Scan sources: {', '.join(sources) if sources else 'None'}")
+    if scan_local:
+        print_flush(f"Scanning path: {scan_path}")
+    
+    print_flush(f"Debug - scan_s3={scan_s3}, scan_local={scan_local}, scan_cloud={scan_cloud}")
+    
+    final_state = run_pipeline(scan_path, scan_cloud, scan_s3, scan_local)
 
     # Ensure outputs directory exists
     os.makedirs("outputs", exist_ok=True)
