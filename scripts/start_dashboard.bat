@@ -1,3 +1,0 @@
-@echo off
-echo Starting PCI DSS Dashboard...
-py -m streamlit run dashboard.py
