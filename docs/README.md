@@ -68,8 +68,6 @@ set AWS_SECRET_ACCESS_KEY=your_secret_key
 set AWS_REGION=us-east-1
 ```
 
-See [BEDROCK_SETUP.md](BEDROCK_SETUP.md) for details.
-
 ### 3. Run Dashboard
 
 ```bash
@@ -154,10 +152,6 @@ py main.py C:\path --s3
 ## Documentation
 
 - [Setup Guide](SETUP.md)
-- [AWS Bedrock Setup](BEDROCK_SETUP.md)
-- [S3 Setup](S3_SETUP.md)
-- [S3 Quick Start](S3_QUICKSTART.md)
-- [S3 Remediation](S3_REMEDIATION.md)
 
 ---
 
