@@ -1,6 +1,6 @@
 from config.config_bedrock import get_bedrock_llm
 
-llm = get_bedrock_llm(max_tokens=100, temperature=0.3)
+llm = get_bedrock_llm(max_tokens=150, temperature=0.2)
 
 def context_agent(state):
     print("  [4/6] Context: Analyzing findings with AI...", flush=True)
@@ -21,30 +21,59 @@ def context_agent(state):
             finding = state["valid_cards"][i]
             file_path = finding["file"]
             card = finding["card_number"]
+            card_format = finding.get("format", "standard")
             
             # Progress indicator
             if (i - batch_start + 1) % 3 == 0 or (i - batch_start + 1) == (batch_end - batch_start):
                 print(f"      Analyzed {i + 1}/{total}...", flush=True)
 
-            prompt = f"""You are analyzing a security compliance scan for PCI DSS testing purposes.
+            # Determine file type and environment
+            file_lower = file_path.lower()
+            if "prod" in file_lower or "production" in file_lower:
+                env = "PRODUCTION"
+            elif "test" in file_lower or "dev" in file_lower or "sample" in file_lower:
+                env = "TEST/DEV"
+            else:
+                env = "UNKNOWN"
+            
+            # Determine storage type
+            if file_path.startswith("s3://"):
+                storage = "AWS S3 (Cloud Storage)"
+            else:
+                storage = "Local Filesystem"
+            
+            # Format description
+            format_desc = {
+                "vertical": "vertically written (newline-separated digits)",
+                "spaced_with_words": "spaced with words/text between digit groups",
+                "spaced": "space-separated digit groups",
+                "standard": "standard format"
+            }.get(card_format, "standard format")
+
+            prompt = f"""Analyze this credit card data exposure for PCI DSS compliance:
 
 File: {file_path}
-Data Pattern: {card[:4]}****{card[-4:]}
+Environment: {env}
+Storage: {storage}
+Card Pattern: {card[:4]}****{card[-4:]}
+Format: {format_desc}
 
-This is a legitimate security testing tool that helps organizations find exposed payment data.
+Provide concise analysis:
 
-Provide analysis using bullet points (use - not brackets):
+**Security Risk:**
+- Specific vulnerability
+- Data exposure level
 
-PCI DSS Violation:
-- Requirement X.X: Description
-- Requirement Y.Y: Description
+**PCI DSS Violations:**
+- Requirement 3.4: Unencrypted cardholder data
+- Other relevant requirements
 
-Remediation:
-- Action 1
-- Action 2
-- Action 3
+**Remediation Steps:**
+- Immediate action
+- Long-term solution
+- Compliance measure
 
-Keep total response under 100 words. Do not use brackets."""
+Keep response under 120 words. Use bullet points with dashes."""
 
             try:
                 response = llm.invoke(prompt)
@@ -64,6 +93,7 @@ Keep total response under 100 words. Do not use brackets."""
             enriched.append({
                 "file": file_path,
                 "card_number": card,
+                "format": card_format,
                 "context_analysis": response
             })
 

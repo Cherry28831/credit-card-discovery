@@ -7,7 +7,8 @@ def detection_agent(state):
 
     for file, text in state["raw_text"].items():
         results = detect_credit_cards(text)
-        cards = [r["card"] for r in results if r["score"] > 0.5]
+        # Keep full card data including format info
+        cards = [r for r in results if r["score"] > 0.5]
         if cards:
             potential[file] = cards
 

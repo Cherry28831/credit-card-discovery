@@ -634,7 +634,9 @@ def run_scan_background(cmd, log_key, status_key, done_key):
                     
                     # Update progress based on log content
                     line_lower = line.lower()
-                    if "[1/6]" in line or "discovery" in line_lower:
+                    if "total findings" in line_lower or "scan complete" in line_lower:
+                        st.session_state["scan_progress"] = "✅ Scan complete!"
+                    elif "[1/6]" in line or "discovery" in line_lower:
                         st.session_state["scan_progress"] = "🔍 Discovering files..."
                     elif "[2/6]" in line or "detection" in line_lower:
                         st.session_state["scan_progress"] = "🔎 Detecting credit cards..."
@@ -648,8 +650,6 @@ def run_scan_background(cmd, log_key, status_key, done_key):
                         st.session_state["scan_progress"] = "📊 Generating report..."
                     elif "database created" in line_lower:
                         st.session_state["scan_progress"] = "💾 Finalizing..."
-                    elif "total findings" in line_lower:
-                        st.session_state["scan_progress"] = "✅ Scan complete!"
                     elif "starting" in line_lower:
                         st.session_state["scan_progress"] = "🚀 Starting scan..."
                     elif "scanning" in line_lower:
@@ -663,11 +663,12 @@ def run_scan_background(cmd, log_key, status_key, done_key):
         current_scan_process.wait()
 
         if st.session_state.get(status_key) != "stopped":
-            st.session_state[status_key] = (
-                "done" if current_scan_process.returncode == 0 else "error"
-            )
             if current_scan_process.returncode == 0:
+                st.session_state[status_key] = "done"
                 st.session_state["scan_progress"] = "✅ Scan complete!"
+            else:
+                st.session_state[status_key] = "error"
+                st.session_state["scan_progress"] = "❌ Scan failed"
     except Exception as e:
         error_msg = f"\nError: {e}"
         if st.session_state.get(status_key) != "stopped":
@@ -1284,16 +1285,8 @@ elif st.session_state.active_tab == 1:
         st.markdown(f'<div class="log-box">{log_html}</div>', unsafe_allow_html=True)
 
         if scan_running:
-            # Check if scan is actually done by looking at the log
-            log_content = st.session_state.scan_log.lower()
-            if "database created" in log_content or "next steps" in log_content or "total findings" in log_content:
-                st.session_state.scan_status = "done"
-                st.session_state.scan_done = True
-                load_data.clear()
-                st.rerun()
-            else:
-                time.sleep(1.5)
-                st.rerun()
+            time.sleep(1.5)
+            st.rerun()
 
     # --- Post-scan actions ---
     if st.session_state.scan_status == "done":
