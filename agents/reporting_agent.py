@@ -18,6 +18,39 @@ def reporting_agent(state):
     total = len(findings)
     critical_high = risk_counts["Critical"] + risk_counts["High"]
 
+    # Handle zero findings case
+    if total == 0:
+        print("    No findings to report", flush=True)
+        state["report"] = f"""# Credit Card Data Discovery - Security Report
+
+**Scan Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Total Findings:** 0
+
+---
+
+## Summary
+
+No credit card data was detected in the scanned files.
+
+This is a positive result indicating:
+- No exposed payment card information found
+- Files scanned are compliant with PCI DSS data storage requirements
+- No immediate remediation actions required
+
+## Recommendations
+
+1. Continue regular security scans to maintain compliance
+2. Implement automated scanning in CI/CD pipelines
+3. Review and update data handling policies regularly
+4. Train staff on secure payment data handling practices
+
+---
+
+**Note:** This scan checked for credit card patterns in text files, PDFs, and images.
+Ensure all data sources are regularly monitored for compliance.
+"""
+        return state
+
     print(f"    Generating AI executive report for {total} findings...", flush=True)
 
     prompt = f"""You are a security compliance consultant writing a report for a legitimate PCI DSS compliance testing tool.

@@ -1,10 +1,11 @@
 # SecureScan - Credit Card Data Discovery System
 
-An AI-powered autonomous compliance system for detecting, validating, and remediating credit card data exposure across local filesystems and cloud storage (AWS S3).
+An AI-powered autonomous compliance system for detecting, validating, and remediating credit card data exposure across local filesystems, cloud storage (AWS S3), PDFs, and images.
 
 ### Key Features
 
-- **Multi-Source Scanning** - Local filesystems, AWS S3 buckets
+- **Multi-Source Scanning** - Local filesystems, AWS S3 buckets, PDFs, images
+- **OCR Support** - Extract text from PDFs and images (PNG, JPG, TIFF, etc.)
 - **AI-Powered Detection** - Microsoft Presidio + Luhn validation (99.9% accuracy)
 - **Risk Analysis** - AWS Bedrock LLM context analysis and classification
 - **Auto-Remediation** - One-click card masking with S3 upload
@@ -43,6 +44,7 @@ An AI-powered autonomous compliance system for detecting, validating, and remedi
 - Python 3.8+
 - AWS Account (for Bedrock LLM)
 - AWS S3 (optional, for cloud scanning)
+- Tesseract OCR (optional, for PDF/image scanning)
 
 ---
 
@@ -58,6 +60,28 @@ py -m spacy download en_core_web_sm
 # Create database
 py create_db.py
 ```
+
+### 2. Install Tesseract OCR (Optional - for PDF/Image scanning)
+
+**Windows:**
+1. Download from: https://github.com/UB-Mannheim/tesseract/wiki
+2. Install to: `C:\Program Files\Tesseract-OCR`
+3. Add to PATH or update `tools/ocr_tool.py` line 8:
+   ```python
+   pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+   ```
+
+**Linux:**
+```bash
+sudo apt-get install tesseract-ocr poppler-utils
+```
+
+**macOS:**
+```bash
+brew install tesseract poppler
+```
+
+**Note:** Without Tesseract, text-based PDFs will still work, but scanned PDFs and images will be skipped.
 
 ### 2. Configure AWS
 
@@ -100,6 +124,12 @@ py main.py C:\path --s3
 
 ## How Detection Works
 
+### Supported File Types
+
+- **Text files**: `.txt`, `.log`, `.csv`, `.json`, `.xml`, `.sql`, `.ini`, `.conf`, etc.
+- **PDFs**: `.pdf` (text-based and scanned/image PDFs via OCR)
+- **Images**: `.png`, `.jpg`, `.jpeg`, `.tiff`, `.bmp`, `.gif` (via OCR)
+
 ### Step 1: Pattern Detection (Presidio)
 
 - Uses regex: `\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4,7}`
@@ -137,10 +167,14 @@ py main.py C:\path --s3
 .
 ├── agents/              # Multi-agent pipeline
 ├── cloud/               # S3 scanner
-├── tools/               # Presidio, Luhn, remediation
+├── tools/               # Presidio, Luhn, OCR, remediation
+│   ├── ocr_tool.py      # PDF/image text extraction
+│   ├── presidio_tool.py # Credit card detection
+│   ├── luhn_tool.py     # Card validation
+│   └── remediation.py   # Card masking
 ├── config/              # AWS Bedrock config
 ├── outputs/             # Scan results (DB, JSON, reports)
-├── sample_files/        # Test data
+├── sample_files/        # Test data (includes PDFs)
 ├── docs/                # Documentation
 ├── dashboard.py         # Streamlit UI
 ├── main.py              # CLI scanner
@@ -158,18 +192,24 @@ py main.py C:\path --s3
 ## Testing
 
 ```bash
-# Test with sample files
+# Test with sample files (includes PDFs)
 py main.py sample_files
 
 # Test S3 connection
 py -c "from cloud.s3_scanner import test_s3_connection; test_s3_connection()"
 ```
 
+**Sample Files Include:**
+- Text files with test cards
+- **invoice_2024_001.pdf** - Invoice with card payment details
+- **payment_receipt_batch.pdf** - Batch receipt with 5 test cards
+
 **Known Test Cards:**
 
-- Visa: `4111111111111111`
-- Mastercard: `5555555555554444`
-- Amex: `378282246310005`
+- Visa: `4111111111111111`, `4532148803436467`
+- Mastercard: `5555555555554444`, `5425233430109903`
+- Amex: `378282246310005`, `378282246310005`
+- Discover: `6011111111111117`
 
 ---
 
@@ -186,6 +226,19 @@ py -c "from cloud.s3_scanner import test_s3_connection; test_s3_connection()"
 - Verify AWS credentials have S3 permissions
 - Ensure `--s3` flag passed
 - Check IAM policy: `s3:ListBucket`, `s3:GetObject`
+
+**OCR not working?**
+
+- Install Tesseract OCR (see installation section)
+- Verify Tesseract is in PATH or update `tools/ocr_tool.py`
+- Text-based PDFs work without Tesseract
+- For scanned PDFs/images, Tesseract is required
+
+**Poor OCR accuracy?**
+
+- Ensure source PDFs/images are high quality
+- Increase DPI in `tools/ocr_tool.py` line 35: `dpi=300` → `dpi=600`
+- OCR works best with clear, high-contrast text
 
 ---
 

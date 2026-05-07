@@ -171,12 +171,18 @@ def remediate_finding(file_path, card_number):
     """
     Main function to remediate a finding.
     Handles both local files and S3 files.
-    - Local: Creates masked file in remediated_files folder
+    - Local text files: Creates masked file in remediated_files folder
+    - PDFs/Images: Cannot be remediated (returns error message)
     - S3: Downloads, masks, and uploads to s3://bucket/remediated/path
     Original file remains untouched.
     
     Returns: (success, message, remediated_file_path)
     """
+    # Check if file is PDF or image
+    file_lower = file_path.lower()
+    if any(file_lower.endswith(ext) for ext in ['.pdf', '.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif']):
+        return False, "Cannot remediate PDF/image files. Please delete the file manually or regenerate without sensitive data.", None
+    
     # Check if S3 path
     if file_path.startswith('s3://'):
         return remediate_s3_file(file_path, card_number)

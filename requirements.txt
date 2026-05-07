@@ -5,3 +5,8 @@ presidio-analyzer
 presidio-anonymizer
 spacy
 boto3
+pytesseract
+Pillow
+pyPDF2
+pdf2image
+reportlab
