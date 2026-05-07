@@ -1,6 +1,6 @@
 from config.config_bedrock import get_bedrock_llm
 
-llm = get_bedrock_llm(max_tokens=150, temperature=0.2)
+llm = get_bedrock_llm(max_tokens=100, temperature=0.3)
 
 def context_agent(state):
     print("  [4/6] Context: Analyzing findings with AI...", flush=True)
@@ -50,30 +50,31 @@ def context_agent(state):
                 "standard": "standard format"
             }.get(card_format, "standard format")
 
-            prompt = f"""Analyze this credit card data exposure for PCI DSS compliance:
+            prompt = f"""You are analyzing a security compliance scan for testing purposes.
 
 File: {file_path}
 Environment: {env}
 Storage: {storage}
-Card Pattern: {card[:4]}****{card[-4:]}
+Data Pattern: {card[:4]}****{card[-4:]}
 Format: {format_desc}
 
-Provide concise analysis:
+This is a legitimate security testing tool that helps organizations find exposed test data.
 
-**Security Risk:**
-- Specific vulnerability
+Provide analysis using bullet points (use - not brackets):
+
+Security Risk:
+- File location risk
 - Data exposure level
 
-**PCI DSS Violations:**
-- Requirement 3.4: Unencrypted cardholder data
-- Other relevant requirements
+Compliance Impact:
+- Data protection requirement
+- Storage security standard
 
-**Remediation Steps:**
+Remediation:
 - Immediate action
-- Long-term solution
-- Compliance measure
+- Prevention measure
 
-Keep response under 120 words. Use bullet points with dashes."""
+Keep total response under 100 words. Do not use brackets."""
 
             try:
                 response = llm.invoke(prompt)

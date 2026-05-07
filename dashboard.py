@@ -11,6 +11,7 @@ import time
 import sys
 import logging
 import shutil
+import json
 from datetime import datetime
 from tools.remediation import remediate_finding
 
@@ -467,6 +468,118 @@ st.markdown(
         margin-bottom: 24px;
         letter-spacing: 0.3px;
     }
+    .scan-summary-card {
+        background: linear-gradient(135deg, rgba(22,27,39,0.95) 0%, rgba(15,17,23,0.95) 100%);
+        border: 1px solid rgba(59,130,246,0.18);
+        border-radius: 14px;
+        padding: 18px 20px;
+        margin-bottom: 12px;
+        animation: fadeIn 0.4s ease-out;
+    }
+    .scan-summary-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
+    .scan-summary-value {
+        font-size: 16px;
+        font-weight: 700;
+        color: #f1f5f9;
+    }
+    .scan-summary-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+    }
+    .scan-summary-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .scan-summary-chip-active {
+        background: rgba(59,130,246,0.16);
+        border: 1px solid rgba(59,130,246,0.28);
+        color: #60a5fa;
+    }
+    .scan-summary-chip-muted {
+        background: rgba(100,116,139,0.16);
+        border: 1px solid rgba(100,116,139,0.24);
+        color: #94a3b8;
+    }
+    .scan-status-panel {
+        background: linear-gradient(135deg, rgba(22,27,39,0.95) 0%, rgba(15,17,23,0.95) 100%);
+        border: 1px solid #1e2535;
+        border-radius: 14px;
+        padding: 16px 18px;
+        animation: fadeIn 0.4s ease-out;
+    }
+    .scan-status-row {
+        display: flex;
+        align-items: center;
+        min-height: 24px;
+    }
+    .status-message {
+        font-weight: 600;
+    }
+    .status-message-running {
+        color: #ffa94d;
+    }
+    .status-message-success {
+        color: #51cf66;
+    }
+    .status-message-error {
+        color: #ff6b6b;
+    }
+    .status-message-idle {
+        color: #64748b;
+    }
+    .scan-meta {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #64748b;
+    }
+    .section-header-spaced {
+        margin-top: 20px;
+    }
+    .section-header-tight {
+        margin-top: 12px;
+    }
+    .scan-note-card {
+        background: rgba(59,130,246,0.08);
+        border: 1px solid rgba(59,130,246,0.25);
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 12px;
+        animation: slideInLeft 0.4s ease-out;
+    }
+    .scan-note-title {
+        color: #60a5fa;
+        font-weight: 700;
+    }
+    .scan-note-copy {
+        color: #94a3b8;
+    }
+    .spacer-xs {
+        height: 8px;
+    }
+    .spacer-sm {
+        height: 12px;
+    }
+    .spacer-md {
+        height: 16px;
+    }
+    .spacer-lg {
+        height: 24px;
+    }
 
     /* ═══════════════════════════════════════════════════════════════════════ */
     /* MISC */
@@ -496,6 +609,210 @@ st.markdown(
 
 # Global variable to track scan process
 current_scan_process = None
+SCAN_LOG_PATH = os.path.join("outputs", "scan.log")
+SCAN_STATE_PATH = os.path.join("outputs", "scan_state.json")
+
+
+def ensure_scan_outputs():
+    os.makedirs("outputs", exist_ok=True)
+
+
+def read_scan_log():
+    try:
+        with open(SCAN_LOG_PATH, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return ""
+
+
+def write_scan_log(content, clear=False):
+    ensure_scan_outputs()
+    mode = "w" if clear else "a"
+    with open(SCAN_LOG_PATH, mode, encoding="utf-8") as f:
+        f.write(content)
+
+
+def load_scan_state():
+    try:
+        with open(SCAN_STATE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_scan_state(**updates):
+    ensure_scan_outputs()
+    state = load_scan_state()
+    state.update(updates)
+    with open(SCAN_STATE_PATH, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=2)
+    return state
+
+
+def reset_scan_state():
+    save_scan_state(
+        status="idle",
+        progress="",
+        progress_value=0,
+        pid=None,
+        command=None,
+        returncode=None,
+        started_at=None,
+        completed_at=None,
+    )
+
+
+def get_progress_update(line):
+    line_lower = line.lower()
+    if (
+        "total findings" in line_lower
+        or "scan complete" in line_lower
+        or "report generated" in line_lower
+        or "findings saved" in line_lower
+    ):
+        return "✅ Scan complete!", 100
+    if "[1/6]" in line or "discovery" in line_lower:
+        return "🔍 Discovering files...", 15
+    if "[2/6]" in line or "detection" in line_lower:
+        return "🔎 Detecting credit cards...", 35
+    if "[3/6]" in line or "validation" in line_lower:
+        return "✓ Validating cards...", 50
+    if "[4/6]" in line or "context" in line_lower:
+        return "🤖 AI analysis in progress...", 65
+    if "[5/6]" in line or "risk" in line_lower:
+        return "⚠️ Classifying risks...", 80
+    if "[6/6]" in line or "reporting" in line_lower:
+        return "📊 Generating report...", 92
+    if "database created" in line_lower or "creating dashboard database" in line_lower:
+        return "💾 Finalizing...", 97
+    if "starting" in line_lower:
+        return "🚀 Starting scan...", 8
+    if "scanning" in line_lower:
+        return "📂 Scanning files...", 12
+    return None, None
+
+
+def derive_progress_from_log(log_text):
+    progress_text = "Initializing scan..."
+    progress_value = 5
+    for line in log_text.splitlines():
+        candidate_text, candidate_value = get_progress_update(line)
+        if candidate_text:
+            progress_text = candidate_text
+            progress_value = candidate_value
+    return progress_text, progress_value
+
+
+def is_process_running(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(int(pid), 0)
+    except (OSError, ProcessLookupError, ValueError):
+        return False
+    return True
+
+
+def artifact_updated_after(path, started_at):
+    if not os.path.exists(path):
+        return False
+    if not started_at:
+        return True
+    try:
+        started_ts = datetime.fromisoformat(started_at).timestamp()
+    except ValueError:
+        return True
+    return os.path.getmtime(path) >= started_ts
+
+
+def scan_artifacts_indicate_completion(state, log_text):
+    started_at = state.get("started_at")
+    log_lower = log_text.lower()
+    completion_markers = [
+        "total findings",
+        "findings saved",
+        "report generated",
+        "database created successfully",
+    ]
+    if any(marker in log_lower for marker in completion_markers):
+        return True
+    return artifact_updated_after(os.path.join("outputs", "findings.db"), started_at) or artifact_updated_after(
+        os.path.join("outputs", "report.txt"), started_at
+    )
+
+
+def sync_scan_status():
+    previous_status = st.session_state.get("scan_status", "idle")
+    state = load_scan_state()
+    log_text = read_scan_log()
+
+    if not state and not log_text:
+        return
+
+    progress_text, progress_value = derive_progress_from_log(log_text)
+    status = state.get("status", previous_status)
+    pid = state.get("pid")
+    returncode = state.get("returncode")
+    now = datetime.now().isoformat(timespec="seconds")
+
+    if status == "running":
+        if pid and is_process_running(pid):
+            pass
+        elif returncode == 0 or scan_artifacts_indicate_completion(state, log_text):
+            status = "done"
+            progress_text = "✅ Scan complete!"
+            progress_value = 100
+            state = save_scan_state(
+                status=status,
+                progress=progress_text,
+                progress_value=progress_value,
+                pid=None,
+                returncode=0,
+                completed_at=state.get("completed_at") or now,
+            )
+        elif "scan stopped by user" in log_text.lower():
+            status = "stopped"
+            progress_text = "⏹️ Scan stopped"
+            state = save_scan_state(
+                status=status,
+                progress=progress_text,
+                progress_value=progress_value,
+                pid=None,
+                completed_at=state.get("completed_at") or now,
+            )
+        elif returncode not in (None, 0):
+            status = "error"
+            progress_text = "❌ Scan failed"
+            progress_value = 100
+            state = save_scan_state(
+                status=status,
+                progress=progress_text,
+                progress_value=progress_value,
+                pid=None,
+                completed_at=state.get("completed_at") or now,
+            )
+
+    if status == "done":
+        progress_text = "✅ Scan complete!"
+        progress_value = 100
+    elif status == "error":
+        progress_text = state.get("progress") or "❌ Scan failed"
+        progress_value = state.get("progress_value", 100)
+    elif status == "stopped":
+        progress_text = state.get("progress") or "⏹️ Scan stopped"
+        progress_value = state.get("progress_value", progress_value)
+
+    st.session_state.scan_log = log_text
+    st.session_state.scan_status = status
+    st.session_state.scan_progress = state.get("progress") or progress_text
+    st.session_state.scan_progress_value = state.get("progress_value", progress_value)
+    st.session_state.scan_done = status in {"done", "error", "stopped"}
+    st.session_state.scan_pid = state.get("pid")
+    st.session_state.scan_started_at = state.get("started_at")
+    st.session_state.scan_command = state.get("command") or []
+
+    if previous_status != status and status == "done":
+        load_data.clear()
 
 
 @st.cache_data(ttl=30)
@@ -552,57 +869,71 @@ def get_badge(risk):
 def stop_scan():
     """Stop the currently running scan process"""
     global current_scan_process
-    if current_scan_process and current_scan_process.poll() is None:
-        try:
-            if sys.platform == "win32":
-                import signal
+    state = load_scan_state()
+    pid = current_scan_process.pid if current_scan_process and current_scan_process.poll() is None else state.get("pid")
 
-                os.kill(current_scan_process.pid, signal.CTRL_C_EVENT)
-                time.sleep(0.5)
-                if current_scan_process.poll() is None:
-                    subprocess.call(
-                        ["taskkill", "/F", "/T", "/PID", str(current_scan_process.pid)],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-            else:
-                import signal
+    if not pid or not is_process_running(pid):
+        return False
 
-                os.kill(current_scan_process.pid, signal.SIGINT)
-                time.sleep(0.5)
-                if current_scan_process.poll() is None:
-                    current_scan_process.kill()
+    try:
+        if sys.platform == "win32":
+            subprocess.call(
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            import signal
 
-            stop_msg = "\n[!] Scan stopped by user (Ctrl+C)\n"
-            st.session_state.scan_log = st.session_state.get("scan_log", "") + stop_msg
             try:
-                with open("outputs/scan.log", "a") as f:
-                    f.write(stop_msg)
-            except:
+                os.killpg(os.getpgid(pid), signal.SIGINT)
+            except ProcessLookupError:
                 pass
+            time.sleep(0.5)
+            if is_process_running(pid):
+                try:
+                    os.killpg(os.getpgid(pid), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
 
-            st.session_state.scan_status = "stopped"
-            st.session_state.scan_done = True
-            current_scan_process = None
-            return True
-        except Exception as e:
-            print(f"Error stopping scan: {e}", flush=True)
-            return False
-    return False
+        stop_msg = "\n[!] Scan stopped by user\n"
+        write_scan_log(stop_msg)
+        progress_text, progress_value = derive_progress_from_log(read_scan_log())
+        save_scan_state(
+            status="stopped",
+            progress="⏹️ Scan stopped",
+            progress_value=progress_value,
+            pid=None,
+            completed_at=datetime.now().isoformat(timespec="seconds"),
+        )
+        st.session_state.scan_log = read_scan_log()
+        st.session_state.scan_status = "stopped"
+        st.session_state.scan_progress = "⏹️ Scan stopped"
+        st.session_state.scan_progress_value = progress_value
+        st.session_state.scan_done = True
+        current_scan_process = None
+        return True
+    except Exception as e:
+        print(f"Error stopping scan: {e}", flush=True)
+        return False
 
 
-def run_scan_background(cmd, log_key, status_key, done_key):
+def run_scan_background(cmd):
     global current_scan_process
     try:
-        # Clear log file
-        with open("outputs/scan.log", "w") as f:
-            f.write("")
-        
-        # Log the command being run
-        init_msg = f"Executing command: {' '.join(cmd)}\n\n"
-        st.session_state[log_key] = init_msg
-        with open("outputs/scan.log", "a", encoding="utf-8") as f:
-            f.write(init_msg)
+        command_string = " ".join(cmd)
+        write_scan_log("", clear=True)
+        write_scan_log(f"Executing command: {command_string}\n\n")
+        save_scan_state(
+            status="running",
+            progress="Initializing scan...",
+            progress_value=5,
+            pid=None,
+            command=cmd,
+            returncode=None,
+            started_at=datetime.now().isoformat(timespec="seconds"),
+            completed_at=None,
+        )
 
         if sys.platform == "win32":
             current_scan_process = subprocess.Popen(
@@ -627,57 +958,58 @@ def run_scan_background(cmd, log_key, status_key, done_key):
                 preexec_fn=os.setsid,
             )
 
+        save_scan_state(pid=current_scan_process.pid)
+
         for line in iter(current_scan_process.stdout.readline, ""):
-            if line:
-                if st.session_state.get(status_key) == "running":
-                    st.session_state[log_key] = st.session_state.get(log_key, "") + line
-                    
-                    # Update progress based on log content
-                    line_lower = line.lower()
-                    if "total findings" in line_lower or "scan complete" in line_lower:
-                        st.session_state["scan_progress"] = "✅ Scan complete!"
-                    elif "[1/6]" in line or "discovery" in line_lower:
-                        st.session_state["scan_progress"] = "🔍 Discovering files..."
-                    elif "[2/6]" in line or "detection" in line_lower:
-                        st.session_state["scan_progress"] = "🔎 Detecting credit cards..."
-                    elif "[3/6]" in line or "validation" in line_lower:
-                        st.session_state["scan_progress"] = "✓ Validating cards..."
-                    elif "[4/6]" in line or "context" in line_lower:
-                        st.session_state["scan_progress"] = "🤖 AI analysis in progress..."
-                    elif "[5/6]" in line or "risk" in line_lower:
-                        st.session_state["scan_progress"] = "⚠️ Classifying risks..."
-                    elif "[6/6]" in line or "reporting" in line_lower:
-                        st.session_state["scan_progress"] = "📊 Generating report..."
-                    elif "database created" in line_lower:
-                        st.session_state["scan_progress"] = "💾 Finalizing..."
-                    elif "starting" in line_lower:
-                        st.session_state["scan_progress"] = "🚀 Starting scan..."
-                    elif "scanning" in line_lower:
-                        st.session_state["scan_progress"] = "📂 Scanning files..."
-                    
-                    with open("outputs/scan.log", "a", encoding="utf-8") as f:
-                        f.write(line)
-                else:
-                    break
+            if not line:
+                continue
+            write_scan_log(line)
+            progress_text, progress_value = get_progress_update(line)
+            if progress_text:
+                save_scan_state(
+                    status="running",
+                    progress=progress_text,
+                    progress_value=progress_value,
+                    pid=current_scan_process.pid,
+                )
 
         current_scan_process.wait()
+        state = load_scan_state()
+        if state.get("status") == "stopped":
+            return
 
-        if st.session_state.get(status_key) != "stopped":
-            if current_scan_process.returncode == 0:
-                st.session_state[status_key] = "done"
-                st.session_state["scan_progress"] = "✅ Scan complete!"
-            else:
-                st.session_state[status_key] = "error"
-                st.session_state["scan_progress"] = "❌ Scan failed"
+        if current_scan_process.returncode == 0:
+            save_scan_state(
+                status="done",
+                progress="✅ Scan complete!",
+                progress_value=100,
+                pid=None,
+                returncode=0,
+                completed_at=datetime.now().isoformat(timespec="seconds"),
+            )
+        else:
+            save_scan_state(
+                status="error",
+                progress="❌ Scan failed",
+                progress_value=100,
+                pid=None,
+                returncode=current_scan_process.returncode,
+                completed_at=datetime.now().isoformat(timespec="seconds"),
+            )
     except Exception as e:
-        error_msg = f"\nError: {e}"
-        if st.session_state.get(status_key) != "stopped":
-            st.session_state[log_key] = st.session_state.get(log_key, "") + error_msg
-            with open("outputs/scan.log", "a", encoding="utf-8") as f:
-                f.write(error_msg)
-            st.session_state[status_key] = "error"
+        error_msg = f"\nError: {e}\n"
+        write_scan_log(error_msg)
+        state = load_scan_state()
+        if state.get("status") != "stopped":
+            save_scan_state(
+                status="error",
+                progress="❌ Scan failed",
+                progress_value=100,
+                pid=None,
+                returncode=-1,
+                completed_at=datetime.now().isoformat(timespec="seconds"),
+            )
     finally:
-        st.session_state[done_key] = True
         current_scan_process = None
 
 
@@ -1043,6 +1375,18 @@ elif st.session_state.active_tab == 1:
         st.session_state.scan_status = "idle"
     if "scan_done" not in st.session_state:
         st.session_state.scan_done = False
+    if "scan_progress" not in st.session_state:
+        st.session_state.scan_progress = ""
+    if "scan_progress_value" not in st.session_state:
+        st.session_state.scan_progress_value = 0
+    if "scan_pid" not in st.session_state:
+        st.session_state.scan_pid = None
+    if "scan_started_at" not in st.session_state:
+        st.session_state.scan_started_at = None
+    if "scan_command" not in st.session_state:
+        st.session_state.scan_command = []
+
+    sync_scan_status()
 
     st.markdown(
         '<div class="scan-title">Run Security Scan</div>', unsafe_allow_html=True
@@ -1052,7 +1396,6 @@ elif st.session_state.active_tab == 1:
         unsafe_allow_html=True,
     )
 
-    # Initialize checkbox states in session state
     if "use_local" not in st.session_state:
         st.session_state.use_local = False
     if "use_s3" not in st.session_state:
@@ -1060,7 +1403,6 @@ elif st.session_state.active_tab == 1:
     if "use_sample" not in st.session_state:
         st.session_state.use_sample = True
 
-    # --- Source selection ---
     st.markdown(
         '<div class="section-header">Scan Sources</div>', unsafe_allow_html=True
     )
@@ -1074,12 +1416,9 @@ elif st.session_state.active_tab == 1:
     with sc3:
         use_sample = st.checkbox("Use Sample Files", value=st.session_state.use_sample, key="chk_sample")
         st.session_state.use_sample = use_sample
-    
-    use_cloud = False
 
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="spacer-xs"></div>', unsafe_allow_html=True)
 
-    # --- Path input ---
     paths = []
     if use_local and not use_sample:
         st.markdown(
@@ -1093,27 +1432,21 @@ elif st.session_state.active_tab == 1:
             key="path_input",
         )
         paths = [p.strip() for p in path_input.strip().splitlines() if p.strip()]
-        
+
         if paths:
-            # Validate paths
-            invalid_paths = []
-            for p in paths:
-                if not os.path.exists(p):
-                    invalid_paths.append(p)
-            
+            invalid_paths = [p for p in paths if not os.path.exists(p)]
             if invalid_paths:
                 st.error(f"⚠️ Invalid paths: {', '.join(invalid_paths)}")
     elif use_sample:
         paths = ["sample_files"]
         st.info("✓ Will scan the built-in `sample_files/` directory.")
-    
-    # Validation message
+
     if use_local and not use_sample and not paths:
         st.warning("⚠️ Please enter at least one valid path to scan local files, or enable 'Use Sample Files'.")
 
     if use_s3 and not use_sample:
         st.markdown(
-            '<div class="section-header" style="margin-top:12px">AWS S3 Configuration</div>',
+            '<div class="section-header section-header-tight">AWS S3 Configuration</div>',
             unsafe_allow_html=True,
         )
         s3_col1, s3_col2 = st.columns(2)
@@ -1121,35 +1454,56 @@ elif st.session_state.active_tab == 1:
             s3_bucket = st.text_input(
                 "S3 Bucket Name (optional - leave empty to scan all accessible buckets)",
                 placeholder="my-bucket-name",
-                help="Leave empty to scan all accessible buckets"
+                help="Leave empty to scan all accessible buckets",
             )
         with s3_col2:
             s3_prefix = st.text_input(
                 "S3 Prefix/Folder (optional)",
                 placeholder="logs/",
-                help="Optional folder path within bucket"
+                help="Optional folder path within bucket",
             )
-        
+
         st.info(
             "💡 AWS credentials should be configured via:\n"
             "- Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)\n"
             "- AWS credentials file (~/.aws/credentials)\n"
             "- IAM role (if running on EC2)"
         )
+    else:
+        s3_bucket = ""
+        s3_prefix = ""
 
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    planned_target = "Sample dataset" if use_sample else paths[0] if paths else "All accessible S3 buckets"
+    source_chips = []
+    if use_sample:
+        source_chips.append('<span class="scan-summary-chip scan-summary-chip-active">Sample Files</span>')
+    if use_local and not use_sample:
+        source_chips.append('<span class="scan-summary-chip scan-summary-chip-active">Local File System</span>')
+    if use_s3:
+        source_chips.append('<span class="scan-summary-chip scan-summary-chip-active">AWS S3</span>')
+    if not source_chips:
+        source_chips.append('<span class="scan-summary-chip scan-summary-chip-muted">No Source Selected</span>')
 
-    # --- Scan status & launch ---
+    st.markdown(
+        f"""
+        <div class="scan-summary-card">
+            <div class="scan-summary-label">Current Scan Plan</div>
+            <div class="scan-summary-value">{planned_target}</div>
+            <div class="scan-summary-list">{''.join(source_chips)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
+
     scan_running = st.session_state.scan_status == "running"
-    
-    # Determine if we can launch
     can_launch = False
     validation_msg = ""
-    
+
     if use_sample:
         can_launch = True
     elif use_local and paths:
-        # Check if paths exist
         valid_paths = [p for p in paths if os.path.exists(p)]
         if valid_paths:
             can_launch = True
@@ -1159,58 +1513,87 @@ elif st.session_state.active_tab == 1:
         can_launch = True
     else:
         validation_msg = "Please select at least one scan source and provide valid paths"
-    
-    col_btn, col_status = st.columns([1, 3])
-    with col_btn:
+
+    col_launch, col_stop, col_status = st.columns([1, 1, 3])
+    with col_launch:
         launch = st.button(
             "Launch Scan" if not scan_running else "Scanning...",
             type="primary",
             use_container_width=True,
             disabled=scan_running or not can_launch,
         )
+    with col_stop:
+        stop_requested = st.button(
+            "Stop Scan",
+            use_container_width=True,
+            disabled=not scan_running,
+        )
     with col_status:
         if st.session_state.scan_status == "running":
-            # Show current scan progress with spinner
             progress_text = st.session_state.get("scan_progress", "Initializing scan...")
-            st.markdown(
-                f'<span class="spinner"></span><span style="color:#ffa94d;font-weight:600">{progress_text}</span>',
-                unsafe_allow_html=True,
+            status_markup = (
+                f'<div class="scan-status-panel"><div class="scan-status-row">'
+                f'<span class="spinner"></span><span class="status-message status-message-running">{progress_text}</span>'
+                f'</div></div>'
             )
         elif st.session_state.scan_status == "done":
-            st.markdown(
-                '<span class="status-dot dot-ok"></span><span style="color:#51cf66;font-weight:600">Scan completed successfully</span>',
-                unsafe_allow_html=True,
+            status_markup = (
+                '<div class="scan-status-panel"><div class="scan-status-row">'
+                '<span class="status-dot dot-ok"></span><span class="status-message status-message-success">Scan completed successfully</span>'
+                '</div></div>'
             )
         elif st.session_state.scan_status == "error":
-            st.markdown(
-                '<span class="status-dot dot-err"></span><span style="color:#ff6b6b;font-weight:600">Scan encountered an error</span>',
-                unsafe_allow_html=True,
+            status_markup = (
+                '<div class="scan-status-panel"><div class="scan-status-row">'
+                '<span class="status-dot dot-err"></span><span class="status-message status-message-error">Scan encountered an error</span>'
+                '</div></div>'
             )
         elif st.session_state.scan_status == "stopped":
-            st.markdown(
-                '<span class="status-dot dot-warn"></span><span style="color:#ffa94d;font-weight:600">Scan stopped by user</span>',
-                unsafe_allow_html=True,
+            status_markup = (
+                '<div class="scan-status-panel"><div class="scan-status-row">'
+                '<span class="status-dot dot-warn"></span><span class="status-message status-message-running">Scan stopped by user</span>'
+                '</div></div>'
             )
         elif not can_launch and validation_msg:
-            st.markdown(
-                f'<span class="status-dot dot-err"></span><span style="color:#ff6b6b;font-weight:600">{validation_msg}</span>',
-                unsafe_allow_html=True,
+            status_markup = (
+                '<div class="scan-status-panel"><div class="scan-status-row">'
+                f'<span class="status-dot dot-err"></span><span class="status-message status-message-error">{validation_msg}</span>'
+                '</div></div>'
             )
         else:
+            status_markup = (
+                '<div class="scan-status-panel"><div class="scan-status-row">'
+                '<span class="status-dot"></span><span class="status-message status-message-idle">Ready to scan — click Launch when ready</span>'
+                '</div></div>'
+            )
+        st.markdown(status_markup, unsafe_allow_html=True)
+
+    if stop_requested and scan_running:
+        if stop_scan():
+            st.rerun()
+        st.warning("No running scan process was found.")
+
+    progress_value = int(st.session_state.get("scan_progress_value", 0) or 0)
+    progress_value = max(0, min(progress_value, 100))
+    if st.session_state.scan_status in {"running", "done", "error", "stopped"}:
+        st.progress(progress_value)
+        meta = []
+        if st.session_state.get("scan_pid"):
+            meta.append(f"PID {st.session_state.scan_pid}")
+        if st.session_state.get("scan_started_at"):
+            meta.append(f"Started {st.session_state.scan_started_at}")
+        if meta:
             st.markdown(
-                '<span class="status-dot" style="background:#334155"></span><span style="color:#64748b">Ready to scan — click Launch when ready</span>',
+                f'<div class="scan-meta">{" • ".join(meta)}</div>',
                 unsafe_allow_html=True,
             )
 
     if launch:
-        # Build command based on selected sources
-        cmd = ["py", "main.py"]
-        
-        # Determine target path
+        cmd = [sys.executable, "main.py"]
+
         if use_sample:
             cmd.append("sample_files")
         elif use_local and paths:
-            # Use first valid path
             valid_paths = [p for p in paths if os.path.exists(p)]
             if valid_paths:
                 cmd.append(valid_paths[0])
@@ -1218,49 +1601,56 @@ elif st.session_state.active_tab == 1:
                 st.error("No valid paths found!")
                 st.stop()
         elif use_s3:
-            # S3 only - use dummy path
             cmd.append(".")
         else:
             st.error("Please select at least one scan source.")
             st.stop()
-        
-        # Add flags based on selected sources
+
         if use_s3:
             cmd.append("--s3")
-        
         if use_s3 and not use_local and not use_sample:
             cmd.append("--skip-local")
-        
-        # Show what we're scanning
+
         sources_list = []
         if use_sample:
             sources_list.append("Sample Files")
         if use_local and paths and not use_sample:
             sources_list.append(f"Local: {paths[0]}")
         if use_s3:
-            sources_list.append("AWS S3")
-        
-        st.session_state.scan_log = f"Starting scan...\nSources: {', '.join(sources_list)}\nCommand: {' '.join(cmd)}\n\n"
+            bucket_details = f" ({s3_bucket})" if s3_bucket else ""
+            prefix_details = f" / {s3_prefix}" if s3_prefix else ""
+            sources_list.append(f"AWS S3{bucket_details}{prefix_details}")
+
+        starting_log = f"Starting scan...\nSources: {', '.join(sources_list)}\nCommand: {' '.join(cmd)}\n\n"
+        write_scan_log(starting_log, clear=True)
+        save_scan_state(
+            status="running",
+            progress="Initializing scan...",
+            progress_value=5,
+            pid=None,
+            command=cmd,
+            returncode=None,
+            started_at=datetime.now().isoformat(timespec="seconds"),
+            completed_at=None,
+        )
+        st.session_state.scan_log = starting_log
         st.session_state.scan_status = "running"
         st.session_state.scan_done = False
         st.session_state.scan_progress = "Initializing scan..."
+        st.session_state.scan_progress_value = 5
         load_data.clear()
-        
-        print(f"DEBUG: Launching scan with command: {cmd}", flush=True)
-        print(f"DEBUG: use_s3={use_s3}, use_local={use_local}, use_sample={use_sample}", flush=True)
 
         thread = threading.Thread(
             target=run_scan_background,
-            args=(cmd, "scan_log", "scan_status", "scan_done"),
+            args=(cmd,),
             daemon=True,
         )
         thread.start()
         st.rerun()
 
-    # --- Log output ---
     if st.session_state.scan_log or scan_running:
         st.markdown(
-            '<div class="section-header" style="margin-top:20px">Scan Output</div>',
+            '<div class="section-header section-header-spaced">Scan Output</div>',
             unsafe_allow_html=True,
         )
 
@@ -1288,13 +1678,13 @@ elif st.session_state.active_tab == 1:
             time.sleep(1.5)
             st.rerun()
 
-    # --- Post-scan actions ---
     if st.session_state.scan_status == "done":
-        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
         pa1, pa2 = st.columns(2)
         with pa1:
             if st.button("View Results", use_container_width=True, type="primary"):
                 load_data.clear()
+                reset_scan_state()
                 st.session_state.scan_status = "idle"
                 st.session_state.scan_log = ""
                 st.session_state.active_tab = 0
@@ -1303,20 +1693,20 @@ elif st.session_state.active_tab == 1:
             if st.button(
                 "Run Another Scan", use_container_width=True, type="secondary"
             ):
+                reset_scan_state()
                 st.session_state.scan_status = "idle"
                 st.session_state.scan_log = ""
                 st.rerun()
 
-    # --- Multiple paths UI hint ---
     if use_local and not use_sample and (not scan_running):
         if paths and len(paths) > 1:
             st.markdown(
                 f"""
-            <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);
-                        border-radius:12px;padding:16px;margin-top:12px;animation:slideInLeft 0.4s ease-out">
-                <span style="color:#60a5fa;font-weight:700">Multi-path mode:</span>
-                <span style="color:#94a3b8"> {len(paths)} paths queued. Only the first path is passed to the scanner in this version.</span>
-            </div>""",
+                <div class="scan-note-card">
+                    <span class="scan-note-title">Multi-path mode:</span>
+                    <span class="scan-note-copy"> {len(paths)} paths queued. Only the first path is passed to the scanner in this version.</span>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
@@ -1380,14 +1770,27 @@ elif st.session_state.active_tab == 2:
             for idx, (_, row) in enumerate(filtered_df.iterrows()):
                 risk = row.get("risk_level", "Unknown")
                 
-                # Use plain text for expander title
+                # Get risk color for styling
+                risk_colors = {
+                    "Critical": "#ff6b6b",
+                    "Medium": "#ffa94d",
+                    "Low": "#51cf66"
+                }
+                risk_color = risk_colors.get(risk, "#94a3b8")
+                
+                # Use plain text for expander title - just the file path
                 file_display = row['file'][:80] if len(row['file']) > 80 else row['file']
-                expander_title = f"{file_display} - {risk}"
+                expander_title = file_display
 
-                with st.expander(expander_title, expanded=(idx == 0)):
-                    # Show badge at the top of expander content
-                    badge = get_badge(risk)
-                    st.markdown(badge, unsafe_allow_html=True)
+                # Create custom styled expander with colored border and path
+                st.markdown(
+                    f'<div style="border-left:4px solid {risk_color};padding-left:12px;margin-bottom:8px">'
+                    f'<span style="color:{risk_color};font-weight:600">{expander_title}</span>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+                
+                with st.expander("View Details", expanded=(idx == 0)):
                     st.markdown("---")
                     
                     left, right = st.columns([1, 3])
