@@ -192,15 +192,3 @@ py -c "from cloud.s3_scanner import test_s3_connection; test_s3_connection()"
 ## License
 
 MIT License - See [LICENSE](LICENSE)
-
----
-
-## Acknowledgments
-
-- **Microsoft Presidio** - PII detection
-- **AWS Bedrock** - LLM analysis
-- **Streamlit** - Dashboard framework
-
----
-
-**Built with care for PCI DSS Compliance**
