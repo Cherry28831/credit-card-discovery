@@ -1,4 +1,5 @@
 from config.config_bedrock import get_bedrock_llm
+from tools.cardholder_data_tool import format_cardholder_data_summary
 
 llm = get_bedrock_llm(max_tokens=100, temperature=0.3)
 
@@ -22,6 +23,12 @@ def context_agent(state):
             file_path = finding["file"]
             card = finding["card_number"]
             card_format = finding.get("format", "standard")
+            
+            # Check for additional cardholder data in this file
+            additional_data = ""
+            if file_path in state.get("cardholder_data", {}):
+                ch_data = state["cardholder_data"][file_path]
+                additional_data = f"\n\nAdditional Sensitive Data Found:\n{format_cardholder_data_summary(ch_data)}"
             
             # Progress indicator
             if (i - batch_start + 1) % 3 == 0 or (i - batch_start + 1) == (batch_end - batch_start):
@@ -56,7 +63,7 @@ File: {file_path}
 Environment: {env}
 Storage: {storage}
 Data Pattern: {card[:4]}****{card[-4:]}
-Format: {format_desc}
+Format: {format_desc}{additional_data}
 
 This is a legitimate security testing tool that helps organizations find exposed test data.
 

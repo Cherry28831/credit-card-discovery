@@ -20,6 +20,10 @@ def risk_agent(state):
         file_path = item["file"]
         context = item.get("context_analysis", "")
         
+        # Add cardholder data to the finding
+        if file_path in state.get("cardholder_data", {}):
+            item["cardholder_data"] = state["cardholder_data"][file_path]
+        
         # Check for test cards in test environments
         if card in test_cards and ("test" in file_path.lower() or "sample" in file_path.lower()):
             item["risk_level"] = "Low"

@@ -32,32 +32,51 @@ def create_database():
             card_number TEXT,
             risk_level TEXT,
             context_analysis TEXT,
-            scan_date TEXT
+            scan_date TEXT,
+            cardholder_data TEXT
         )
     """)
     
-    # Clear existing data
-    cursor.execute("DELETE FROM findings")
+    # Check for duplicates and only insert new findings
+    existing_cards = set()
+    cursor.execute("SELECT file, card_number FROM findings")
+    for row in cursor.fetchall():
+        existing_cards.add((row[0], row[1]))
     
-    # Insert findings
+    # Insert only new findings
     scan_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    new_count = 0
     for finding in findings:
+        file_path = finding.get("file", "")
+        card_num = finding.get("card_number", "")
+        
+        # Skip if already exists
+        if (file_path, card_num) in existing_cards:
+            continue
+        
+        # Serialize cardholder data if present
+        ch_data = finding.get("cardholder_data", {})
+        ch_data_json = json.dumps(ch_data) if ch_data else ""
+        
         cursor.execute("""
-            INSERT INTO findings (file, card_number, risk_level, context_analysis, scan_date)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO findings (file, card_number, risk_level, context_analysis, scan_date, cardholder_data)
+            VALUES (?, ?, ?, ?, ?, ?)
         """, (
-            finding.get("file", ""),
-            finding.get("card_number", ""),
+            file_path,
+            card_num,
             finding.get("risk_level", "Medium"),
             finding.get("context_analysis", ""),
-            scan_date
+            scan_date,
+            ch_data_json
         ))
+        new_count += 1
     
     conn.commit()
     conn.close()
     
-    print(f"Database created: outputs/findings.db")
-    print(f"Imported {len(findings)} findings")
+    total_in_db = len(existing_cards) + new_count
+    print(f"Database updated: outputs/findings.db")
+    print(f"Added {new_count} new findings (Total: {total_in_db})")
 
 if __name__ == "__main__":
     create_database()

@@ -1,0 +1,309 @@
+CUSTOMER DATABASE EXPORT - Q4 2024
+=====================================
+Generated: December 15, 2024
+Total Records: 847
+
+RECORD #1847
+Customer ID: CUST-2024-8471
+Full Name: Rajesh Kumar Sharma
+Contact: +91-9876543210
+Alternate: 9123456789
+Email: rajesh.kumar@email.com
+Aadhaar: 2345 6789 1234
+PAN: ABCDE1234F
+Address: 123 MG Road, Bangalore, Karnataka 560001
+
+Payment Method: Card ending 1111
+Complete Number: 4532 1488 0343 6467
+Security Code: 847
+Valid Through: 03/26
+Billing Name: RAJESH SHARMA
+
+---
+
+RECORD #1848
+Customer ID: CUST-2024-8472
+Name: Priya Patel
+Mobile Number: 8765432109
+Secondary Contact: +91-7654321098
+Email: priya.p@company.in
+UID Number: 3456 7891 2345
+PAN Card: FGHIJ5678K
+Location: Flat 45, Andheri West, Mumbai 400058
+
+Card Details:
+Account Number: 5425233430109903
+Verification Value: 321
+Expiration: 11/25
+Name on Card: PRIYA M PATEL
+
+---
+
+RECORD #1849
+ID: CUST-2024-8473
+Customer: Amit Singh
+Phone: 9988776655
+WhatsApp: +91-8877665544
+Email: amit.singh99@gmail.com
+Aadhaar No: 4567 8912 3456
+PAN: KLMNO9012P
+Address: House 78, Sector 21, Noida, UP 201301
+
+Financial Info:
+Card Type: Visa
+Number: 4111111111111111
+CVV2: 456
+Expires: 08/27
+Cardholder: AMIT SINGH
+
+---
+
+RECORD #1850
+Cust ID: CUST-2024-8474
+Name: Sneha Reddy
+Contact No: 7766554433
+Alt Phone: 9876501234
+Email: sneha.reddy@techcorp.com
+UIDAI: 5678 9123 4567
+Permanent Account Number: PQRST3456U
+Address: Villa 12, Jubilee Hills, Hyderabad 500033
+
+Payment Card:
+Type: MasterCard
+Full Number: 5555555555554444
+CVC: 789
+Valid Until: 05/26
+Card Holder Name: SNEHA REDDY
+
+---
+
+RECORD #1851
+Customer Reference: CUST-2024-8475
+Full Name: Mohammed Iqbal
+Mobile: +91-9012345678
+Office: 8901234567
+Email: m.iqbal@business.co.in
+Aadhaar Card: 6789 1234 5678
+PAN Number: UVWXY6789Z
+Address: Shop 34, Commercial Street, Chennai 600001
+
+Credit Card Information:
+Card Network: American Express
+Account: 378282246310005
+Security Digits: 1234
+Expiry Date: 12/25
+Name: MOHAMMED IQBAL
+
+---
+
+RECORD #1852
+ID: CUST-2024-8476
+Customer Name: Anita Deshmukh
+Primary Phone: 8123456789
+Secondary: +91-7012345678
+Email: anita.d@startup.io
+Aadhaar: 7891 2345 6789
+PAN: ABCPQ1357R
+Residence: Apartment 201, Koregaon Park, Pune 411001
+
+Card on File:
+Issuer: Visa
+Card No: 4916338506082832
+Verification Code: 234
+Valid Thru: 09/26
+Printed Name: ANITA DESHMUKH
+
+---
+
+RECORD #1853
+Cust#: CUST-2024-8477
+Name: Vikram Malhotra
+Tel: 9234567890
+Mobile: +91-8345678901
+Email: vikram.m@finance.com
+UID: 8912 3456 7891
+PAN Card No: DEFGH2468S
+Address: Bungalow 5, Golf Course Road, Gurgaon 122001
+
+Payment Details:
+Type: Discover
+Number: 6011111111111117
+CVV: 567
+Expiration Date: 07/27
+Cardholder: VIKRAM MALHOTRA
+
+---
+
+RECORD #1854
+Customer: Lakshmi Iyer
+Contact: 7345678912
+Alt: 8456789123
+Email: lakshmi.iyer@email.net
+Aadhaar Number: 9123 4567 8912
+PAN: IJKLM3579T
+Address: 67 Anna Salai, Chennai 600002
+
+Card Information:
+Brand: MasterCard
+Full Account: 5105105105105100
+Security Number: 890
+Valid Through: 04/26
+Name: LAKSHMI IYER
+
+---
+
+RECORD #1855
+ID: CUST-2024-8478
+Full Name: Arjun Kapoor
+Phone Number: 9876012345
+Secondary: +91-8765901234
+Email: arjun.k@media.in
+UIDAI Number: 1234 5678 9123
+PAN: NOPQR4680V
+Location: Tower B-1203, Worli, Mumbai 400018
+
+Payment Method on Record:
+Network: Visa
+Card: 4539148803436467
+Code: 123
+Expires: 02/27
+Name on Card: ARJUN KAPOOR
+
+---
+
+RECORD #1856
+Customer ID: CUST-2024-8479
+Name: Divya Nair
+Mobile: 8567890123
+Contact: 7678901234
+Email: divya.nair@consulting.com
+Aadhaar: 2345 6789 1230
+PAN Number: STUVW5791X
+Address: House 89, Indiranagar, Bangalore 560038
+
+Credit Card:
+Type: Visa
+Number: 4024007150779945
+Verification: 456
+Expiry: 10/26
+Holder: DIVYA NAIR
+
+---
+
+RECORD #1857
+Ref: CUST-2024-8480
+Customer: Rahul Joshi
+Tel: +91-9123450876
+Alt Phone: 8234561987
+Email: rahul.joshi@tech.co.in
+UID No: 3456 7890 1234
+Permanent Account: YZABC6802Y
+Address: Plot 45, Banjara Hills, Hyderabad 500034
+
+Card Details:
+Issuer: MasterCard
+Account Number: 2221000000000009
+CVC Code: 789
+Valid Until: 06/27
+Cardholder Name: RAHUL JOSHI
+
+---
+
+RECORD #1858
+Cust ID: CUST-2024-8481
+Name: Meera Gupta
+Phone: 7890123456
+WhatsApp: +91-6789012345
+Email: meera.g@design.in
+Aadhaar Card Number: 4567 8901 2345
+PAN: CDEFG7913Z
+Address: Flat 302, Salt Lake, Kolkata 700091
+
+Payment Card Details:
+Type: Visa
+Full Number: 4485275742308327
+Security Value: 234
+Expiration: 01/27
+Card Name: MEERA GUPTA
+
+---
+
+RECORD #1859
+Customer: Sanjay Verma
+ID: CUST-2024-8482
+Contact Number: 8901234567
+Secondary: 7012345689
+Email: sanjay.v@retail.com
+UIDAI: 5678 9012 3456
+PAN Card: HIJKL8024A
+Address: Shop 12, Connaught Place, New Delhi 110001
+
+Card on Account:
+Network: American Express
+Card Number: 371449635398431
+Security Digits: 4321
+Expires: 08/26
+Name: SANJAY VERMA
+
+---
+
+RECORD #1860
+ID: CUST-2024-8483
+Full Name: Pooja Menon
+Mobile No: 9012345678
+Alt Contact: +91-8123456780
+Email: pooja.menon@healthcare.in
+Aadhaar: 6789 0123 4567
+PAN Number: KLMNO9135B
+Address: Villa 23, Whitefield, Bangalore 560066
+
+Financial Details:
+Card Type: Visa
+Account: 4916108926268679
+Verification Code: 567
+Valid Thru: 03/27
+Printed Name: POOJA MENON
+
+---
+
+RECORD #1861
+Customer Reference: CUST-2024-8484
+Name: Karthik Subramanian
+Phone: 7123456789
+Mobile: +91-8234567891
+Email: karthik.s@engineering.co.in
+UID: 7890 1234 5678
+PAN: PQRST1246C
+Address: Apartment 405, T Nagar, Chennai 600017
+
+Payment Information:
+Issuer: MasterCard
+Number: 5425233430109903
+CVV: 890
+Expiration Date: 11/25
+Cardholder: KARTHIK SUBRAMANIAN
+
+---
+
+RECORD #1862
+Cust#: CUST-2024-8485
+Customer Name: Neha Agarwal
+Primary Contact: 8234567890
+Secondary Phone: 7345678902
+Email: neha.agarwal@fashion.in
+Aadhaar Number: 8901 2345 6789
+PAN Card Number: UVWXY2357D
+Location: Tower C-801, Powai, Mumbai 400076
+
+Card Details on File:
+Brand: Visa
+Full Card Number: 4024007106512380
+Security Code: 123
+Valid Through: 05/27
+Name on Card: NEHA AGARWAL
+
+---
+
+END OF EXPORT
+Total Records Processed: 16
+Confidential - Internal Use Only

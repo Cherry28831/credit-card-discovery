@@ -7,6 +7,7 @@ An AI-powered autonomous compliance system for detecting, validating, and remedi
 - **Multi-Source Scanning** - Local filesystems, AWS S3 buckets, PDFs, images
 - **OCR Support** - Extract text from PDFs and images (PNG, JPG, TIFF, etc.)
 - **AI-Powered Detection** - Microsoft Presidio + Luhn validation (99.9% accuracy)
+- **Cardholder Data Detection** - CVV, expiry dates, cardholder names, PINs, track data
 - **Risk Analysis** - AWS Bedrock LLM context analysis and classification
 - **Auto-Remediation** - One-click card masking with S3 upload
 - **Interactive Dashboard** - Real-time progress, analytics, and reporting
@@ -136,6 +137,14 @@ py main.py C:\path --s3
 - Detects: `4111111111111111`, `4111-1111-1111-1111`, `4111 1111 1111 1111`
 - Confidence score > 0.5 kept
 
+### Step 1.5: Cardholder Data Detection
+
+- **CVV/CVC**: 3-4 digit security codes (labeled or near card context)
+- **Expiry Dates**: MM/YY, MM/YYYY formats (labeled or near card context)
+- **Cardholder Names**: Person names near card-related keywords using NER
+- **PIN Codes**: 4-6 digit codes (only when explicitly labeled)
+- **Track Data**: Magnetic stripe data (Track 1 & 2 formats)
+
 ### Step 2: Luhn Validation
 
 - Mathematical checksum algorithm
@@ -145,9 +154,24 @@ py main.py C:\path --s3
 ### Step 3: AI Risk Classification
 
 - AWS Bedrock analyzes file path, type, storage location
-- **Critical**: Production logs, public S3
-- **Medium**: Dev/test logs, configs
+- Considers additional cardholder data found (CVV, expiry, names)
+- **Critical**: Production logs, public S3, full cardholder data
+- **Medium**: Dev/test logs, configs, partial data
 - **Low**: Test cards in sample files
+
+---
+
+## Cardholder Data Detected
+
+Beyond credit card numbers, the system detects:
+
+- **CVV/CVC Codes**: 3-4 digit security codes
+- **Expiry Dates**: MM/YY or MM/YYYY formats  
+- **Cardholder Names**: Using NLP entity recognition
+- **PIN Codes**: When explicitly labeled
+- **Track Data**: Magnetic stripe data (Track 1 & 2)
+
+All findings are included in the AI analysis and risk assessment.
 
 ---
 
@@ -170,6 +194,7 @@ py main.py C:\path --s3
 ├── tools/               # Presidio, Luhn, OCR, remediation
 │   ├── ocr_tool.py      # PDF/image text extraction
 │   ├── presidio_tool.py # Credit card detection
+│   ├── cardholder_data_tool.py # CVV, expiry, names detection
 │   ├── luhn_tool.py     # Card validation
 │   └── remediation.py   # Card masking
 ├── config/              # AWS Bedrock config

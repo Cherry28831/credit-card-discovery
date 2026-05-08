@@ -9,4 +9,3 @@ INSERT INTO customer_transactions (customer_id, card_number, amount, timestamp) 
 (1003, '4916338506082832', 89.50, '2024-01-15 12:45:10');
 
 -- Production payment gateway logs
--- CRITICAL: Unencrypted card data in production database

@@ -40,18 +40,6 @@ st.markdown(
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    @keyframes slideInLeft {
-        from { opacity: 0; transform: translateX(-20px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-    @keyframes slideInRight {
-        from { opacity: 0; transform: translateX(20px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.6; }
-    }
     @keyframes shimmer {
         0% { background-position: -1000px 0; }
         100% { background-position: 1000px 0; }
@@ -440,12 +428,10 @@ st.markdown(
     .dot-ok {
         background: #51cf66;
         box-shadow: 0 0 12px #51cf66, inset 0 0 4px rgba(81,207,102,0.5);
-        animation: pulse 2s ease-in-out infinite;
     }
     .dot-warn {
         background: #ffa94d;
         box-shadow: 0 0 12px #ffa94d, inset 0 0 4px rgba(255,169,77,0.5);
-        animation: pulse 1.5s ease-in-out infinite;
     }
     .dot-err {
         background: #ff6b6b;
@@ -922,7 +908,6 @@ def run_scan_background(cmd):
     global current_scan_process
     try:
         command_string = " ".join(cmd)
-        write_scan_log("", clear=True)
         write_scan_log(f"Executing command: {command_string}\n\n")
         save_scan_state(
             status="running",
@@ -996,6 +981,102 @@ def run_scan_background(cmd):
                 returncode=current_scan_process.returncode,
                 completed_at=datetime.now().isoformat(timespec="seconds"),
             )
+    except Exception as e:
+        error_msg = f"\nError: {e}\n"
+        write_scan_log(error_msg)
+        state = load_scan_state()
+        if state.get("status") != "stopped":
+            save_scan_state(
+                status="error",
+                progress="❌ Scan failed",
+                progress_value=100,
+                pid=None,
+                returncode=-1,
+                completed_at=datetime.now().isoformat(timespec="seconds"),
+            )
+    finally:
+        current_scan_process = None
+
+
+def run_multi_scan_background(commands):
+    """Run multiple scans sequentially and merge results"""
+    global current_scan_process
+    import sqlite3
+    
+    try:
+        total_commands = len(commands)
+        
+        for idx, cmd in enumerate(commands, 1):
+            command_string = " ".join(cmd)
+            write_scan_log(f"\n{'='*60}\n")
+            write_scan_log(f"Scanning path {idx}/{total_commands}\n")
+            write_scan_log(f"Command: {command_string}\n\n")
+            
+            if sys.platform == "win32":
+                current_scan_process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True,
+                    env={**os.environ, "PYTHONUNBUFFERED": "1"},
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+                )
+            else:
+                current_scan_process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True,
+                    env={**os.environ, "PYTHONUNBUFFERED": "1"},
+                    preexec_fn=os.setsid,
+                )
+
+            save_scan_state(pid=current_scan_process.pid)
+
+            for line in iter(current_scan_process.stdout.readline, ""):
+                if not line:
+                    continue
+                write_scan_log(line)
+                progress_text, progress_value = get_progress_update(line)
+                if progress_text:
+                    # Adjust progress based on current path
+                    base_progress = ((idx - 1) / total_commands) * 100
+                    path_progress = (progress_value / 100) * (100 / total_commands)
+                    total_progress = int(base_progress + path_progress)
+                    save_scan_state(
+                        status="running",
+                        progress=f"[{idx}/{total_commands}] {progress_text}",
+                        progress_value=total_progress,
+                        pid=current_scan_process.pid,
+                    )
+
+            current_scan_process.wait()
+            
+            state = load_scan_state()
+            if state.get("status") == "stopped":
+                return
+            
+            if current_scan_process.returncode != 0:
+                write_scan_log(f"\n⚠️ Path {idx} scan failed with return code {current_scan_process.returncode}\n")
+            else:
+                write_scan_log(f"\n✓ Path {idx} scan completed successfully\n")
+        
+        # All scans complete
+        write_scan_log(f"\n{'='*60}\n")
+        write_scan_log(f"All {total_commands} path(s) scanned successfully!\n")
+        
+        save_scan_state(
+            status="done",
+            progress="✅ All scans complete!",
+            progress_value=100,
+            pid=None,
+            returncode=0,
+            completed_at=datetime.now().isoformat(timespec="seconds"),
+        )
     except Exception as e:
         error_msg = f"\nError: {e}\n"
         write_scan_log(error_msg)
@@ -1419,30 +1500,72 @@ elif st.session_state.active_tab == 1:
 
     st.markdown('<div class="spacer-xs"></div>', unsafe_allow_html=True)
 
+    # Initialize session state for paths
+    if "scan_paths" not in st.session_state:
+        st.session_state.scan_paths = []
+
     paths = []
     if use_local and not use_sample:
         st.markdown(
             '<div class="section-header">Local Paths</div>', unsafe_allow_html=True
         )
-        path_input = st.text_area(
-            "Enter one or more paths (one per line)",
-            placeholder="C:\\Users\\YourName\\Documents\\test_folder\nC:\\temp\\logs",
-            height=110,
-            label_visibility="collapsed",
-            key="path_input",
-        )
-        paths = [p.strip() for p in path_input.strip().splitlines() if p.strip()]
-
-        if paths:
-            invalid_paths = [p for p in paths if not os.path.exists(p)]
-            if invalid_paths:
-                st.error(f"⚠️ Invalid paths: {', '.join(invalid_paths)}")
+        
+        # Add new path input
+        col_input, col_add = st.columns([4, 1])
+        with col_input:
+            new_path = st.text_input(
+                "Add path to scan",
+                placeholder="C:\\Users\\YourName\\Documents\\test_folder",
+                label_visibility="collapsed",
+                key="new_path_input",
+            )
+        with col_add:
+            if st.button("➕ Add", use_container_width=True, type="secondary"):
+                if new_path and new_path.strip():
+                    if os.path.exists(new_path.strip()):
+                        if new_path.strip() not in st.session_state.scan_paths:
+                            st.session_state.scan_paths.append(new_path.strip())
+                            st.rerun()
+                        else:
+                            st.warning("Path already added")
+                    else:
+                        st.error("⚠️ Path does not exist")
+                else:
+                    st.warning("Please enter a path")
+        
+        # Display added paths
+        if st.session_state.scan_paths:
+            st.markdown('<div style="margin-top:12px;margin-bottom:8px;color:#94a3b8;font-size:13px;font-weight:600">Paths to scan:</div>', unsafe_allow_html=True)
+            for idx, path in enumerate(st.session_state.scan_paths):
+                col_path, col_remove = st.columns([5, 1])
+                with col_path:
+                    st.markdown(
+                        f'<div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:10px;margin-bottom:6px;color:#e2e8f0;font-size:13px">'
+                        f'<span style="color:#60a5fa;font-weight:600">{idx+1}.</span> {path}'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                with col_remove:
+                    if st.button("🗑️", key=f"remove_{idx}", use_container_width=True, type="secondary"):
+                        st.session_state.scan_paths.pop(idx)
+                        st.rerun()
+            
+            if st.button("Clear All Paths", type="secondary"):
+                st.session_state.scan_paths = []
+                st.rerun()
+        else:
+            st.info("➕ Add one or more paths to scan using the input above")
+        
+        paths = st.session_state.scan_paths
     elif use_sample:
         paths = ["sample_files"]
-        st.info("✓ Will scan the built-in `sample_files/` directory.")
-
-    if use_local and not use_sample and not paths:
-        st.warning("⚠️ Please enter at least one valid path to scan local files, or enable 'Use Sample Files'.")
+        st.markdown(
+            '<div style="background:rgba(81,207,102,0.1);border:1px solid rgba(81,207,102,0.3);border-radius:10px;padding:14px;margin-top:12px">'
+            '<span style="color:#51cf66;font-weight:700">✓ Sample Files Mode:</span> '
+            '<span style="color:#94a3b8">Will scan all files in the <code>sample_files/</code> directory</span>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
     if use_s3 and not use_sample:
         st.markdown(
@@ -1472,28 +1595,6 @@ elif st.session_state.active_tab == 1:
     else:
         s3_bucket = ""
         s3_prefix = ""
-
-    planned_target = "Sample dataset" if use_sample else paths[0] if paths else "All accessible S3 buckets"
-    source_chips = []
-    if use_sample:
-        source_chips.append('<span class="scan-summary-chip scan-summary-chip-active">Sample Files</span>')
-    if use_local and not use_sample:
-        source_chips.append('<span class="scan-summary-chip scan-summary-chip-active">Local File System</span>')
-    if use_s3:
-        source_chips.append('<span class="scan-summary-chip scan-summary-chip-active">AWS S3</span>')
-    if not source_chips:
-        source_chips.append('<span class="scan-summary-chip scan-summary-chip-muted">No Source Selected</span>')
-
-    st.markdown(
-        f"""
-        <div class="scan-summary-card">
-            <div class="scan-summary-label">Current Scan Plan</div>
-            <div class="scan-summary-value">{planned_target}</div>
-            <div class="scan-summary-list">{''.join(source_chips)}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
     st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
 
@@ -1589,46 +1690,48 @@ elif st.session_state.active_tab == 1:
             )
 
     if launch:
-        cmd = [sys.executable, "main.py"]
-
+        # Determine paths to scan
         if use_sample:
-            cmd.append("sample_files")
+            scan_paths_to_process = ["sample_files"]
         elif use_local and paths:
-            valid_paths = [p for p in paths if os.path.exists(p)]
-            if valid_paths:
-                cmd.append(valid_paths[0])
-            else:
-                st.error("No valid paths found!")
-                st.stop()
+            scan_paths_to_process = paths
         elif use_s3:
-            cmd.append(".")
+            scan_paths_to_process = ["."]
         else:
             st.error("Please select at least one scan source.")
             st.stop()
 
-        if use_s3:
-            cmd.append("--s3")
-        if use_s3 and not use_local and not use_sample:
-            cmd.append("--skip-local")
+        # Build commands for all paths
+        all_commands = []
+        for scan_path in scan_paths_to_process:
+            cmd = [sys.executable, "main.py", scan_path]
+            if use_s3:
+                cmd.append("--s3")
+            if use_s3 and not use_local and not use_sample:
+                cmd.append("--skip-local")
+            all_commands.append(cmd)
 
         sources_list = []
         if use_sample:
             sources_list.append("Sample Files")
         if use_local and paths and not use_sample:
-            sources_list.append(f"Local: {paths[0]}")
+            sources_list.extend([f"Local: {p}" for p in paths])
         if use_s3:
             bucket_details = f" ({s3_bucket})" if s3_bucket else ""
             prefix_details = f" / {s3_prefix}" if s3_prefix else ""
             sources_list.append(f"AWS S3{bucket_details}{prefix_details}")
 
-        starting_log = f"Starting scan...\nSources: {', '.join(sources_list)}\nCommand: {' '.join(cmd)}\n\n"
+        starting_log = f"Starting multi-path scan...\nTotal paths: {len(scan_paths_to_process)}\nSources: {', '.join(sources_list)}\n\n"
+        for i, cmd in enumerate(all_commands, 1):
+            starting_log += f"Path {i}/{len(all_commands)}: {' '.join(cmd)}\n"
+        starting_log += "\n"
         write_scan_log(starting_log, clear=True)
         save_scan_state(
             status="running",
             progress="Initializing scan...",
             progress_value=5,
             pid=None,
-            command=cmd,
+            command=all_commands,
             returncode=None,
             started_at=datetime.now().isoformat(timespec="seconds"),
             completed_at=None,
@@ -1638,11 +1741,13 @@ elif st.session_state.active_tab == 1:
         st.session_state.scan_done = False
         st.session_state.scan_progress = "Initializing scan..."
         st.session_state.scan_progress_value = 5
+        st.session_state.scan_command = all_commands
         load_data.clear()
 
+        # Run scans sequentially for all paths
         thread = threading.Thread(
-            target=run_scan_background,
-            args=(cmd,),
+            target=run_multi_scan_background,
+            args=(all_commands,),
             daemon=True,
         )
         thread.start()
@@ -1698,17 +1803,7 @@ elif st.session_state.active_tab == 1:
                 st.session_state.scan_log = ""
                 st.rerun()
 
-    if use_local and not use_sample and (not scan_running):
-        if paths and len(paths) > 1:
-            st.markdown(
-                f"""
-                <div class="scan-note-card">
-                    <span class="scan-note-title">Multi-path mode:</span>
-                    <span class="scan-note-copy"> {len(paths)} paths queued. Only the first path is passed to the scanner in this version.</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  TAB 2 – AI ANALYSIS
@@ -1779,7 +1874,7 @@ elif st.session_state.active_tab == 2:
                 risk_color = risk_colors.get(risk, "#94a3b8")
                 
                 # Use plain text for expander title - just the file path
-                file_display = row['file'][:80] if len(row['file']) > 80 else row['file']
+                file_display = row['file']
                 expander_title = file_display
 
                 # Create custom styled expander with colored border and path
@@ -1793,136 +1888,182 @@ elif st.session_state.active_tab == 2:
                 with st.expander("View Details", expanded=(idx == 0)):
                     st.markdown("---")
                     
-                    left, right = st.columns([1, 3])
+                    left, right = st.columns([1, 1])
                     with left:
+                        st.markdown("**Card Details**")
                         card_str = str(row["card_number"])
                         masked = (
                             f"{card_str[:4]}{'*' * 8}{card_str[-4:]}"
                             if len(card_str) >= 8
                             else card_str
                         )
-                        st.markdown(f"**Card:** `{masked}`")
+                        st.markdown(f"Card: `{masked}`")
                         source_lbl = (
                             "S3"
                             if str(row["file"]).startswith("s3://")
                             else ("Cloud" if str(row["file"]).startswith("gdrive://") else "Local")
                         )
-                        st.markdown(f"**Source:** {source_lbl}")
+                        st.markdown(f"Source: {source_lbl}")
                         if "remediation" in row and row["remediation"]:
                             is_done = "Masked and saved" in str(row["remediation"])
                             st.markdown(
-                                f"**Status:** {'Remediated' if is_done else 'Pending'}"
+                                f"Status: {'Remediated' if is_done else 'Pending'}"
                             )
-
-                        st.markdown("---")
-                        if st.button(
-                            "Delete Finding",
-                            key=f"del_{idx}",
-                            use_container_width=True,
-                            type="secondary",
-                        ):
+                        
+                        # Display cardholder data if present
+                        if "cardholder_data" in row and row["cardholder_data"]:
                             try:
-                                conn = sqlite3.connect("outputs/findings.db")
-                                cursor = conn.cursor()
-                                cursor.execute(
-                                    "DELETE FROM findings WHERE id = ?", (row["id"],)
-                                )
-                                conn.commit()
-                                conn.close()
-                                load_data.clear()
-                                st.success("Finding deleted!")
-                                time.sleep(0.5)
-                                st.rerun()
+                                ch_data = json.loads(row["cardholder_data"]) if isinstance(row["cardholder_data"], str) else row["cardholder_data"]
+                                if ch_data and ch_data.get("total_count", 0) > 0:
+                                    st.markdown("")
+                                    st.markdown(
+                                        '<div style="background:rgba(255,107,107,0.15);border:2px solid #ff6b6b;border-radius:8px;padding:10px;margin:8px 0">'
+                                        '<div style="color:#ff6b6b;font-weight:700;font-size:13px;margin-bottom:6px">🚨 Additional Cardholder Data</div>'
+                                        f'<div style="color:#f1f5f9;font-size:12px">Total: {ch_data.get("total_count", 0)} items</div>'
+                                        '</div>',
+                                        unsafe_allow_html=True
+                                    )
+                                    
+                                    findings = ch_data.get("findings", {})
+                                    
+                                    # CVV Codes
+                                    if findings.get("cvv"):
+                                        st.markdown(f"**CVV ({len(findings['cvv'])}):** `{findings['cvv'][0]['value']}`" + (f" +{len(findings['cvv'])-1} more" if len(findings['cvv']) > 1 else ""))
+                                    
+                                    # Expiry Dates
+                                    if findings.get("expiry_date"):
+                                        st.markdown(f"**Expiry ({len(findings['expiry_date'])}):** `{findings['expiry_date'][0]['value']}`" + (f" +{len(findings['expiry_date'])-1} more" if len(findings['expiry_date']) > 1 else ""))
+                                    
+                                    # Cardholder Names
+                                    if findings.get("cardholder_name"):
+                                        # Filter out false positives
+                                        valid_names = [n for n in findings['cardholder_name'] if n['value'].lower() not in ['batch', 'expiry', 'card', 'payment']]
+                                        if valid_names:
+                                            st.markdown(f"**Name ({len(valid_names)}):** `{valid_names[0]['value']}`" + (f" +{len(valid_names)-1} more" if len(valid_names) > 1 else ""))
+                                    
+                                    # PINs
+                                    if findings.get("pin"):
+                                        masked_pin = '*' * len(findings['pin'][0]['value'])
+                                        st.markdown(f"**PIN ({len(findings['pin'])}):** `{masked_pin}`" + (f" +{len(findings['pin'])-1} more" if len(findings['pin']) > 1 else ""))
+                                    
+                                    # Track Data
+                                    if findings.get("track_data"):
+                                        st.markdown(f"**Track Data:** {len(findings['track_data'])} found")
                             except Exception as e:
-                                st.error(f"Error: {e}")
+                                pass
 
-                        if st.button(
-                            "Remediate",
-                            key=f"rem_{idx}",
-                            use_container_width=True,
-                            type="primary",
-                        ):
-                            try:
-                                is_s3 = str(row["file"]).startswith("s3://")
-                                
-                                success, message, remediated_path = remediate_finding(
-                                    row["file"], row["card_number"]
-                                )
-
-                                if not success:
-                                    st.error(message)
-                                else:
-                                    if is_s3:
-                                        st.success("Remediated and uploaded to S3!")
-                                    elif "Google Drive" in message:
-                                        st.success(
-                                            "Remediated locally and uploaded to Google Drive!"
-                                        )
-                                    else:
-                                        st.success("Remediated locally!")
-
-                                    rem_conn = sqlite3.connect("outputs/remediated.db")
-                                    rem_cursor = rem_conn.cursor()
-                                    rem_cursor.execute(
-                                        """
-                                        CREATE TABLE IF NOT EXISTS remediated_findings (
-                                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                            original_file TEXT,
-                                            remediated_file TEXT,
-                                            card_number TEXT,
-                                            risk_level TEXT,
-                                            remediation TEXT,
-                                            scan_date TEXT,
-                                            remediation_date TEXT,
-                                            context_analysis TEXT
-                                        )
-                                    """
-                                    )
-                                    
-                                    # Update message for display
-                                    display_message = message
-                                    if is_s3:
-                                        display_message = f"Masked and uploaded to S3: {remediated_path}"
-                                    
-                                    rem_cursor.execute(
-                                        """
-                                        INSERT INTO remediated_findings
-                                        (original_file, remediated_file, card_number, risk_level, remediation, scan_date, remediation_date, context_analysis)
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                                    """,
-                                        (
-                                            row["file"],
-                                            remediated_path,
-                                            row["card_number"],
-                                            row["risk_level"],
-                                            display_message,
-                                            row["scan_date"],
-                                            datetime.now().strftime(
-                                                "%Y-%m-%d %H:%M:%S"
-                                            ),
-                                            row.get("context_analysis", ""),
-                                        ),
-                                    )
-                                    rem_conn.commit()
-                                    rem_conn.close()
-
+                        st.markdown("")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button(
+                                "🗑️ Delete",
+                                key=f"del_{idx}",
+                                use_container_width=True,
+                                type="secondary",
+                            ):
+                                try:
                                     conn = sqlite3.connect("outputs/findings.db")
                                     cursor = conn.cursor()
                                     cursor.execute(
-                                        "DELETE FROM findings WHERE id = ?",
-                                        (row["id"],),
+                                        "DELETE FROM findings WHERE id = ?", (row["id"],)
                                     )
                                     conn.commit()
                                     conn.close()
-
                                     load_data.clear()
-                                    load_remediated_data.clear()
-                                    st.success("Remediated! Card masked in file.")
-                                    time.sleep(1)
+                                    st.success("Finding deleted!")
+                                    time.sleep(0.5)
                                     st.rerun()
-                            except Exception as e:
-                                st.error(f"Error: {e}")
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
+                        with col2:
+                            if st.button(
+                                "✅ Remediate",
+                                key=f"rem_{idx}",
+                                use_container_width=True,
+                                type="primary",
+                            ):
+                                try:
+                                    is_s3 = str(row["file"]).startswith("s3://")
+                                    
+                                    success, message, remediated_path = remediate_finding(
+                                        row["file"], row["card_number"]
+                                    )
+
+                                    if not success:
+                                        st.error(message)
+                                    else:
+                                        if is_s3:
+                                            st.success("Remediated and uploaded to S3!")
+                                        elif "Google Drive" in message:
+                                            st.success(
+                                                "Remediated locally and uploaded to Google Drive!"
+                                            )
+                                        else:
+                                            st.success("Remediated locally!")
+
+                                        rem_conn = sqlite3.connect("outputs/remediated.db")
+                                        rem_cursor = rem_conn.cursor()
+                                        rem_cursor.execute(
+                                            """
+                                            CREATE TABLE IF NOT EXISTS remediated_findings (
+                                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                original_file TEXT,
+                                                remediated_file TEXT,
+                                                card_number TEXT,
+                                                risk_level TEXT,
+                                                remediation TEXT,
+                                                scan_date TEXT,
+                                                remediation_date TEXT,
+                                                context_analysis TEXT
+                                            )
+                                        """
+                                        )
+                                        
+                                        # Update message for display
+                                        display_message = message
+                                        if is_s3:
+                                            display_message = f"Masked and uploaded to S3: {remediated_path}"
+                                        
+                                        rem_cursor.execute(
+                                            """
+                                            INSERT INTO remediated_findings
+                                            (original_file, remediated_file, card_number, risk_level, remediation, scan_date, remediation_date, context_analysis)
+                                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                        """,
+                                            (
+                                                row["file"],
+                                                remediated_path,
+                                                row["card_number"],
+                                                row["risk_level"],
+                                                display_message,
+                                                row["scan_date"],
+                                                datetime.now().strftime(
+                                                    "%Y-%m-%d %H:%M:%S"
+                                                ),
+                                                row.get("context_analysis", ""),
+                                            ),
+                                        )
+                                        rem_conn.commit()
+                                        rem_conn.close()
+
+                                        conn = sqlite3.connect("outputs/findings.db")
+                                        cursor = conn.cursor()
+                                        cursor.execute(
+                                            "DELETE FROM findings WHERE id = ?",
+                                            (row["id"],),
+                                        )
+                                        conn.commit()
+                                        conn.close()
+
+                                        load_data.clear()
+                                        load_remediated_data.clear()
+                                        st.success("Remediated! Card masked in file.")
+                                        time.sleep(1)
+                                        st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
                     with right:
+                        st.markdown("**AI Risk Analysis**")
                         analysis = clean_context_analysis(
                             row.get("context_analysis", "")
                         )

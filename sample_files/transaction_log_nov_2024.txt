@@ -1,0 +1,330 @@
+TRANSACTION PROCESSING LOG
+System: PaymentGateway v3.2.1
+Date Range: Nov 1 - Nov 30, 2024
+Server: prod-payment-01.internal
+
+[2024-11-03 10:23:45] TXN_ID: TXN20241103102345
+Merchant: ElectronicsHub Store #247
+Amount: ₹45,899.00
+Status: APPROVED
+Auth Code: 847291
+
+Customer Details:
+- Name: Suresh Krishnan
+- Contact: 9845612378
+- Email: suresh.k@email.com
+- ID Proof: 1234 5678 9012
+
+Payment Instrument:
+- Type: Credit
+- Issuer: HDFC Bank
+- Last 4: 3467
+- Full PAN: 4532148803436467
+- Sec Code: 847
+- Validity: 03/26
+- Holder: SURESH KRISHNAN
+
+[2024-11-05 14:17:32] TXN_ID: TXN20241105141732
+Merchant: FashionWorld Online
+Amount: ₹12,450.00
+Status: APPROVED
+Auth Code: 562183
+
+Buyer Information:
+- Full Name: Kavita Sharma
+- Mobile: +91-8756234901
+- Email: kavita.sharma@company.com
+- Govt ID: 2345 6789 0123
+
+Card Used:
+- Network: MC
+- Bank: ICICI
+- Number: 5425 2334 3010 9903
+- Verification: 321
+- Exp: 11/25
+- Name: KAVITA SHARMA
+
+[2024-11-07 09:45:18] TXN_ID: TXN20241107094518
+Merchant: BookStore Express
+Amount: ₹3,299.00
+Status: APPROVED
+Auth Code: 734562
+
+Payer:
+- Customer: Anil Mehta
+- Phone: 7623451890
+- Email: anil.m@business.in
+- UID: 3456 7890 1234
+
+Payment Card:
+- Brand: VISA
+- Institution: SBI
+- Account: 4111 1111 1111 1111
+- Security: 456
+- Expiration: 08/27
+- Printed: ANIL MEHTA
+
+[2024-11-09 16:32:09] TXN_ID: TXN20241109163209
+Merchant: GroceryMart #89
+Amount: ₹8,765.00
+Status: APPROVED
+Auth Code: 891234
+
+Customer Record:
+- Name: Deepa Reddy
+- Tel: 9012345678
+- Email: deepa.reddy@tech.co.in
+- Aadhaar: 4567 8901 2345
+
+Financial Instrument:
+- Type: Debit
+- Provider: Axis Bank
+- Card No: 5555555555554444
+- CVC: 789
+- Valid Till: 05/26
+- Owner: DEEPA REDDY
+
+[2024-11-12 11:28:54] TXN_ID: TXN20241112112854
+Merchant: TravelBookings.com
+Amount: ₹67,500.00
+Status: APPROVED
+Auth Code: 456789
+
+Traveler Details:
+- Full Name: Ravi Patel
+- Contact No: 8901234567
+- Email: ravi.patel@travel.in
+- ID Number: 5678 9012 3456
+
+Payment Method:
+- Card Type: AMEX
+- Issuing Bank: American Express
+- Card: 3782 822463 10005
+- Code: 1234
+- Expires: 12/25
+- Cardholder: RAVI PATEL
+
+[2024-11-14 13:55:41] TXN_ID: TXN20241114135541
+Merchant: PharmaCare Plus
+Amount: ₹2,180.00
+Status: APPROVED
+Auth Code: 234567
+
+Patient Information:
+- Name: Sunita Iyer
+- Mobile: 7890123456
+- Email: sunita.iyer@health.com
+- UIDAI: 6789 0123 4567
+
+Payment Details:
+- Network: Visa
+- Bank: Kotak Mahindra
+- Full Number: 4916338506082832
+- Verification Value: 234
+- Valid Through: 09/26
+- Name on Card: SUNITA IYER
+
+[2024-11-16 10:12:27] TXN_ID: TXN20241116101227
+Merchant: TechGadgets Store
+Amount: ₹34,999.00
+Status: APPROVED
+Auth Code: 678901
+
+Purchaser:
+- Customer Name: Manoj Kumar
+- Phone Number: 9123456780
+- Email: manoj.kumar@it.co.in
+- Aadhaar No: 7890 1234 5678
+
+Card Information:
+- Type: Credit Card
+- Issuer: Yes Bank
+- Account Number: 6011111111111117
+- Security Digits: 567
+- Expiry Date: 07/27
+- Holder Name: MANOJ KUMAR
+
+[2024-11-18 15:47:33] TXN_ID: TXN20241118154733
+Merchant: JewelryPalace
+Amount: ₹125,000.00
+Status: APPROVED
+Auth Code: 345678
+
+Customer:
+- Full Name: Priyanka Desai
+- Contact: +91-8234567890
+- Email: priyanka.d@luxury.in
+- ID: 8901 2345 6789
+
+Payment Card Details:
+- Brand: MasterCard
+- Provider: HDFC
+- Number: 5105105105105100
+- CVV2: 890
+- Validity: 04/26
+- Card Name: PRIYANKA DESAI
+
+[2024-11-20 12:34:19] TXN_ID: TXN20241120123419
+Merchant: FitnessZone Gym
+Amount: ₹15,000.00
+Status: APPROVED
+Auth Code: 567890
+
+Member Details:
+- Name: Vikram Singh
+- Mobile: 7345678901
+- Email: vikram.singh@fitness.com
+- Govt ID: 9012 3456 7890
+
+Payment Instrument:
+- Type: Visa Debit
+- Bank: PNB
+- Card: 4539 1488 0343 6467
+- Code: 123
+- Exp Date: 02/27
+- Holder: VIKRAM SINGH
+
+[2024-11-22 09:18:45] TXN_ID: TXN20241122091845
+Merchant: RestaurantDeluxe
+Amount: ₹4,850.00
+Status: APPROVED
+Auth Code: 789012
+
+Diner Information:
+- Guest: Anjali Nair
+- Phone: 8456789012
+- Email: anjali.nair@food.in
+- UID Number: 1234 5678 9012
+
+Card on File:
+- Network: Visa
+- Institution: Canara Bank
+- Full Account: 4024007150779945
+- Verification: 456
+- Expiration: 10/26
+- Name: ANJALI NAIR
+
+[2024-11-24 17:25:51] TXN_ID: TXN20241124172551
+Merchant: ElectronicsWorld
+Amount: ₹28,750.00
+Status: APPROVED
+Auth Code: 890123
+
+Buyer:
+- Customer: Rohit Gupta
+- Tel: 9567890123
+- Email: rohit.g@electronics.co.in
+- Aadhaar: 2345 6789 0123
+
+Payment Card:
+- Type: MC Credit
+- Bank: IndusInd
+- Number: 2221 0000 0000 0009
+- Security Code: 789
+- Valid Until: 06/27
+- Cardholder: ROHIT GUPTA
+
+[2024-11-26 14:42:37] TXN_ID: TXN20241126144237
+Merchant: HomeDecor Studio
+Amount: ₹19,999.00
+Status: APPROVED
+Auth Code: 901234
+
+Customer Info:
+- Name: Swati Joshi
+- Contact Number: 8678901234
+- Email: swati.joshi@design.in
+- ID Proof: 3456 7890 1234
+
+Financial Details:
+- Card Brand: Visa
+- Issuer: Bank of Baroda
+- Account: 4485 2757 4230 8327
+- CVC: 234
+- Expires: 01/27
+- Printed Name: SWATI JOSHI
+
+[2024-11-28 11:09:22] TXN_ID: TXN20241128110922
+Merchant: PetSupplies Store
+Amount: ₹6,540.00
+Status: APPROVED
+Auth Code: 012345
+
+Pet Owner:
+- Full Name: Arjun Malhotra
+- Mobile No: 7789012345
+- Email: arjun.m@pets.com
+- UIDAI No: 4567 8901 2345
+
+Payment Method:
+- Network: American Express
+- Bank: Amex India
+- Card Number: 3714 496353 98431
+- Security: 4321
+- Valid Thru: 08/26
+- Name on Card: ARJUN MALHOTRA
+
+[2024-11-29 16:53:08] TXN_ID: TXN20241129165308
+Merchant: MusicInstruments Hub
+Amount: ₹42,300.00
+Status: APPROVED
+Auth Code: 123456
+
+Musician Details:
+- Name: Nisha Kapoor
+- Phone: 9890123456
+- Email: nisha.kapoor@music.in
+- Aadhaar Card: 5678 9012 3456
+
+Card Details:
+- Type: Visa Credit
+- Provider: Standard Chartered
+- Full Number: 4916 1089 2626 8679
+- Verification Code: 567
+- Expiry: 03/27
+- Holder: NISHA KAPOOR
+
+[2024-11-30 13:27:44] TXN_ID: TXN20241130132744
+Merchant: SportsEquipment Pro
+Amount: ₹31,200.00
+Status: APPROVED
+Auth Code: 234567
+
+Athlete Information:
+- Customer: Siddharth Rao
+- Contact: +91-8901234568
+- Email: siddharth.rao@sports.co.in
+- ID: 6789 0123 4567
+
+Payment Card Info:
+- Brand: MasterCard
+- Bank: Citi Bank
+- Number: 5425 2334 3010 9903
+- CVV: 890
+- Expiration Date: 11/25
+- Card Holder: SIDDHARTH RAO
+
+[2024-11-30 18:45:29] TXN_ID: TXN20241130184529
+Merchant: BeautyProducts Online
+Amount: ₹7,899.00
+Status: APPROVED
+Auth Code: 345678
+
+Shopper:
+- Name: Rina Chatterjee
+- Mobile: 7012345678
+- Email: rina.c@beauty.in
+- UID: 7890 1234 5678
+
+Card Used:
+- Type: Visa
+- Issuer: Union Bank
+- Account Number: 4024 0071 0651 2380
+- Security Number: 123
+- Valid Through: 05/27
+- Name: RINA CHATTERJEE
+
+===== END OF LOG =====
+Total Transactions: 16
+Total Amount Processed: ₹4,64,630.00
+System Status: OPERATIONAL
