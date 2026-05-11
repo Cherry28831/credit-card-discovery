@@ -580,6 +580,27 @@ st.markdown(
     }
 
     /* ═══════════════════════════════════════════════════════════════════════ */
+    /* CARDHOLDER DATA */
+    /* ═══════════════════════════════════════════════════════════════════════ */
+    .cardholder-data-banner {
+        background: rgba(255,107,107,0.12);
+        border: 2px solid #ff6b6b;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 12px 0;
+    }
+    .cardholder-data-title {
+        color: #ff6b6b;
+        font-weight: 700;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+    .cardholder-data-summary {
+        color: #f1f5f9;
+        font-size: 13px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════ */
     /* RESPONSIVE */
     /* ═══════════════════════════════════════════════════════════════════════ */
     @media (max-width: 768px) {
@@ -1917,38 +1938,54 @@ elif st.session_state.active_tab == 2:
                                 if ch_data and ch_data.get("total_count", 0) > 0:
                                     st.markdown("")
                                     st.markdown(
-                                        '<div style="background:rgba(255,107,107,0.15);border:2px solid #ff6b6b;border-radius:8px;padding:10px;margin:8px 0">'
-                                        '<div style="color:#ff6b6b;font-weight:700;font-size:13px;margin-bottom:6px">🚨 Additional Cardholder Data</div>'
-                                        f'<div style="color:#f1f5f9;font-size:12px">Total: {ch_data.get("total_count", 0)} items</div>'
+                                        '<div class="cardholder-data-banner">'
+                                        '<div class="cardholder-data-title">🚨 Additional Cardholder Data</div>'
+                                        f'<div class="cardholder-data-summary">Total: {ch_data.get("total_count", 0)} items</div>'
                                         '</div>',
                                         unsafe_allow_html=True
                                     )
-                                    
+
                                     findings = ch_data.get("findings", {})
-                                    
-                                    # CVV Codes
-                                    if findings.get("cvv"):
-                                        st.markdown(f"**CVV ({len(findings['cvv'])}):** `{findings['cvv'][0]['value']}`" + (f" +{len(findings['cvv'])-1} more" if len(findings['cvv']) > 1 else ""))
-                                    
-                                    # Expiry Dates
-                                    if findings.get("expiry_date"):
-                                        st.markdown(f"**Expiry ({len(findings['expiry_date'])}):** `{findings['expiry_date'][0]['value']}`" + (f" +{len(findings['expiry_date'])-1} more" if len(findings['expiry_date']) > 1 else ""))
-                                    
-                                    # Cardholder Names
-                                    if findings.get("cardholder_name"):
-                                        # Filter out false positives
-                                        valid_names = [n for n in findings['cardholder_name'] if n['value'].lower() not in ['batch', 'expiry', 'card', 'payment']]
-                                        if valid_names:
-                                            st.markdown(f"**Name ({len(valid_names)}):** `{valid_names[0]['value']}`" + (f" +{len(valid_names)-1} more" if len(valid_names) > 1 else ""))
-                                    
-                                    # PINs
-                                    if findings.get("pin"):
-                                        masked_pin = '*' * len(findings['pin'][0]['value'])
-                                        st.markdown(f"**PIN ({len(findings['pin'])}):** `{masked_pin}`" + (f" +{len(findings['pin'])-1} more" if len(findings['pin']) > 1 else ""))
-                                    
-                                    # Track Data
-                                    if findings.get("track_data"):
-                                        st.markdown(f"**Track Data:** {len(findings['track_data'])} found")
+
+                                    with st.expander("📋 View All Details", expanded=False):
+                                        st.markdown("---")
+
+                                        # CVV Codes
+                                        if findings.get("cvv"):
+                                            st.markdown(f"**CVV Codes ({len(findings['cvv'])}):**")
+                                            cvv_items = [f"`{item['value']}`" for item in findings['cvv']]
+                                            st.markdown(", ".join(cvv_items))
+                                            st.markdown("")
+
+                                        # Expiry Dates
+                                        if findings.get("expiry_date"):
+                                            st.markdown(f"**Expiry Dates ({len(findings['expiry_date'])}):**")
+                                            expiry_items = [f"`{item['value']}`" for item in findings['expiry_date']]
+                                            st.markdown(", ".join(expiry_items))
+                                            st.markdown("")
+
+                                        # Cardholder Names
+                                        if findings.get("cardholder_name"):
+                                            # Filter out false positives
+                                            valid_names = [n for n in findings['cardholder_name'] if n['value'].lower() not in ['batch', 'expiry', 'card', 'payment']]
+                                            if valid_names:
+                                                st.markdown(f"**Cardholder Names ({len(valid_names)}):**")
+                                                name_items = [f"`{n['value']}`" for n in valid_names]
+                                                st.markdown(", ".join(name_items))
+                                                st.markdown("")
+
+                                        # PINs
+                                        if findings.get("pin"):
+                                            st.markdown(f"**PINs ({len(findings['pin'])}):**")
+                                            pin_items = [f"`{'*' * len(item['value'])}`" for item in findings['pin']]
+                                            st.markdown(", ".join(pin_items))
+                                            st.markdown("")
+
+                                        # Track Data
+                                        if findings.get("track_data"):
+                                            st.markdown(f"**Track Data ({len(findings['track_data'])}):**")
+                                            track_items = [f"`{item['value'][:20]}...`" if len(item['value']) > 20 else f"`{item['value']}`" for item in findings['track_data']]
+                                            st.markdown(", ".join(track_items))
                             except Exception as e:
                                 pass
 

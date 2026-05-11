@@ -1,14 +1,4 @@
 import re
-from presidio_analyzer import AnalyzerEngine
-from presidio_analyzer.nlp_engine import NlpEngineProvider
-
-# Initialize Presidio for name detection
-provider = NlpEngineProvider(nlp_configuration={
-    "nlp_engine_name": "spacy", 
-    "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}]
-})
-nlp_engine = provider.create_engine()
-analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
 
 
 def detect_cvv(text):
@@ -17,48 +7,40 @@ def detect_cvv(text):
     CVV patterns:
     - 3 digits for Visa, Mastercard, Discover
     - 4 digits for Amex
-    - Often labeled as CVV, CVC, CVV2, CID, Security Code
+    - Only labeled CVV to avoid false positives
     """
     findings = []
     
-    # Pattern 1: Labeled CVV (e.g., "CVV: 123", "CVC: 456", "Security Code: 789")
+    # Pattern: Labeled CVV only (high confidence)
     labeled_patterns = [
-        r'(?:CVV|CVC|CVV2|CID|Security\s*Code|Card\s*Security\s*Code|CSC)[\s:]*(\d{3,4})\b',
-        r'(?:cvv|cvc|cvv2|cid|security\s*code)[\s:]*(\d{3,4})\b',
+        r'(?:CVV|CVC|CVV2|CID|Security\s*Code|Security\s*Digits?|Security\s*Value|Verification\s*(?:Code|Value|Digits?))[\s:]*([*]{3,4}|\d{3,4})\b',
     ]
     
     for pattern in labeled_patterns:
         for match in re.finditer(pattern, text, re.IGNORECASE):
             cvv = match.group(1)
-            context_start = max(0, match.start() - 30)
-            context_end = min(len(text), match.end() + 30)
-            context = text[context_start:context_end].strip()
             
-            findings.append({
-                "type": "CVV",
-                "value": cvv,
-                "confidence": 0.95,
-                "context": context,
-                "position": match.start()
-            })
-    
-    # Pattern 2: Standalone 3-4 digits near card-related keywords
-    # Only flag if near card/payment context to reduce false positives
-    card_context_pattern = r'(?:card|payment|credit|debit|visa|mastercard|amex|discover).*?(\d{3,4})\b'
-    for match in re.finditer(card_context_pattern, text, re.IGNORECASE):
-        cvv = match.group(1)
-        # Avoid flagging years, amounts, etc.
-        if not re.search(r'(19|20)\d{2}', cvv) and not cvv.startswith('0'):
-            context_start = max(0, match.start())
-            context_end = min(len(text), match.end() + 20)
-            context = text[context_start:context_end].strip()
+            # Skip masked values
+            if '*' in cvv:
+                continue
+                
+            # Skip if it looks like part of a card number (4 consecutive digits)
+            context_start = max(0, match.start() - 50)
+            context_end = min(len(text), match.end() + 50)
+            context = text[context_start:context_end]
+            
+            # Skip if surrounded by more digits (likely part of card number)
+            if re.search(r'\d{4,}\s*' + re.escape(cvv), context) or re.search(re.escape(cvv) + r'\s*\d{4,}', context):
+                continue
+            
+            context = context.strip()
             
             # Check if not already found
-            if not any(f['value'] == cvv and abs(f['position'] - match.start()) < 50 for f in findings):
+            if not any(f['value'] == cvv and abs(f['position'] - match.start()) < 30 for f in findings):
                 findings.append({
                     "type": "CVV",
                     "value": cvv,
-                    "confidence": 0.7,
+                    "confidence": 0.95,
                     "context": context,
                     "position": match.start()
                 })
@@ -134,55 +116,64 @@ def detect_expiry_date(text):
 
 def detect_cardholder_name(text):
     """
-    Detect cardholder names using Presidio NER
-    Looks for PERSON entities near card-related keywords
+    Detect cardholder names using explicit patterns
+    Looks for names in labeled contexts only to avoid false positives
     """
     findings = []
     
-    # Use Presidio to detect person names
-    results = analyzer.analyze(
-        text=text,
-        entities=["PERSON"],
-        language="en"
-    )
+    # Pattern 1: Explicitly labeled cardholder names (most reliable)
+    labeled_patterns = [
+        r'(?:Card\s*Holder|Cardholder|Name\s*on\s*Card|Holder)[\s:]+([A-Z][A-Z\s]+)(?=\n|\r|$)',
+        r'(?:Printed\s*Name|Card\s*Name|Owner)[\s:]+([A-Z][A-Z\s]+)(?=\n|\r|$)',
+    ]
     
-    for result in results:
-        name = text[result.start:result.end].strip()
-        
-        # Get context around the name
-        context_start = max(0, result.start - 50)
-        context_end = min(len(text), result.end + 50)
-        context = text[context_start:context_end]
-        
-        # Check if near card-related keywords
-        card_keywords = r'(?:card\s*holder|cardholder|name\s*on\s*card|account\s*holder|customer|payment|billing)'
-        
-        if re.search(card_keywords, context, re.IGNORECASE):
-            findings.append({
-                "type": "CARDHOLDER_NAME",
-                "value": name,
-                "confidence": result.score,
-                "context": context.strip(),
-                "position": result.start
-            })
+    for pattern in labeled_patterns:
+        for match in re.finditer(pattern, text):
+            name = match.group(1).strip()
+            
+            # Validate: must be 2-4 words, all caps, letters only
+            words = name.split()
+            if 2 <= len(words) <= 4 and all(w.isupper() and w.isalpha() for w in words):
+                context_start = max(0, match.start() - 30)
+                context_end = min(len(text), match.end() + 30)
+                context = text[context_start:context_end].strip()
+                
+                # Check if not already found
+                if not any(f['value'] == name for f in findings):
+                    findings.append({
+                        "type": "CARDHOLDER_NAME",
+                        "value": name,
+                        "confidence": 0.9,
+                        "context": context,
+                        "position": match.start()
+                    })
     
-    # Also look for explicitly labeled names
-    labeled_pattern = r'(?:Card\s*Holder|Cardholder|Name\s*on\s*Card|Account\s*Holder)[\s:]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)'
-    for match in re.finditer(labeled_pattern, text, re.IGNORECASE):
-        name = match.group(1).strip()
-        context_start = max(0, match.start() - 20)
-        context_end = min(len(text), match.end() + 20)
-        context = text[context_start:context_end].strip()
-        
-        # Check if not already found
-        if not any(f['value'].lower() == name.lower() for f in findings):
-            findings.append({
-                "type": "CARDHOLDER_NAME",
-                "value": name,
-                "confidence": 0.9,
-                "context": context,
-                "position": match.start()
-            })
+    # Pattern 2: Names in customer/buyer/payer sections
+    customer_patterns = [
+        r'(?:Customer|Buyer|Payer|Member|Guest|Shopper|Athlete|Musician|Pet Owner|Diner|Purchaser|Traveler|Patient)[\s:]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+        r'(?:Full\s*Name|Customer\s*Name|Name)[\s:]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+    ]
+    
+    for pattern in customer_patterns:
+        for match in re.finditer(pattern, text):
+            name = match.group(1).strip()
+            
+            # Validate: must be 2-4 words, proper case
+            words = name.split()
+            if 2 <= len(words) <= 4 and all(w[0].isupper() and w[1:].islower() and w.isalpha() for w in words):
+                context_start = max(0, match.start() - 30)
+                context_end = min(len(text), match.end() + 30)
+                context = text[context_start:context_end].strip()
+                
+                # Check if not already found
+                if not any(f['value'] == name for f in findings):
+                    findings.append({
+                        "type": "CARDHOLDER_NAME",
+                        "value": name,
+                        "confidence": 0.85,
+                        "context": context,
+                        "position": match.start()
+                    })
     
     return findings
 
